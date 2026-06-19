@@ -35,6 +35,7 @@ impl CPU {
                 s: 0xFD,
                 p: 0,
                 cycle_count: 0
+
             }
             
     }
@@ -65,12 +66,15 @@ impl CPU {
         self.cycle_count = 0;
     }
 
-    pub fn tick(&mut self){
-        let opcode : u8 = self.read(self.pc);
+    pub fn tick(&mut self) -> u8 {
+        let opcode: u8 = self.read(self.pc);
         self.pc += 1;
-        let (instruction, cycles) = opcodes::decode(opcode);
-        instruction(self);
-        self.cycle_count += cycles as u64;
+        let (instruction, base_cycles) = opcodes::decode(opcode);
+        let extra_cycles = instruction(self);
+        let total_cycles = base_cycles + extra_cycles;
+        self.cycle_count += total_cycles as u64;
+        
+        total_cycles
     }
 
     pub fn cycle(&mut self, cycles : u64) {
