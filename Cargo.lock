@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "nes"
-version = "0.1.0"
+name = "oolio151-nes"
+version = "26.0.0"
