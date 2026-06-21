@@ -1,5 +1,14 @@
 mod opcodes;
 
+pub enum Flag {
+    Carry,
+    Zero,
+    InterruptDisable,
+    Decimal,
+    B,
+    Overflow,
+    Negative
+}
 pub struct CPU {
 
     memory: [u8; 65536],
@@ -90,4 +99,23 @@ impl CPU {
     pub fn cycle(&mut self, cycles : u64) {
         self.cycle_count += cycles;
     }
+
+    pub fn set_flag(&mut self, flag : Flag, on : bool){
+        let mask: u8 = match flag {
+            Flag::Carry            => 0b0000_0001,
+            Flag::Zero             => 0b0000_0010,
+            Flag::InterruptDisable => 0b0000_0100,
+            Flag::Decimal          => 0b0000_1000,
+            Flag::B                => 0b0001_0000,
+            Flag::Overflow         => 0b0100_0000,
+            Flag::Negative         => 0b1000_0000,
+        };
+
+        if on {
+            self.p |= mask;
+        } else {
+            self.p &= !mask;
+        }
+    }
+
 }
