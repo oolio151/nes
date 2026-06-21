@@ -83,10 +83,34 @@ fn absolutey(cpu: &mut CPU) -> (u8, bool) {
 }
 
 fn indirectx(cpu: &mut CPU) -> u8 {
+    let byte: u8 = cpu.read(cpu.pc);
+    cpu.pc += 1;
+
+    let zp_addr = byte.wrapping_add(cpu.x);
+
+    let lo = cpu.read(zp_addr as u16);
+    let hi = cpu.read(zp_addr.wrapping_add(1) as u16);
+
+    let addr: u16 = ((hi as u16) << 8) | (lo as u16);
+
+    cpu.read(addr)
+}
+
+fn indirecty(cpu: &mut CPU) -> (u8, bool) {
     let byte = cpu.read(cpu.pc);
     cpu.pc += 1;
 
-    
+    let lo = cpu.read(byte as u16);
+    let hi = cpu.read(byte.wrapping_add(1) as u16);
+
+    let base: u16 = ((hi as u16) << 8) | (lo as u16);
+
+    let addr: u16 = base.wrapping_add(cpu.y as u16);
+
+    let page_crossed = (addr & 0xFF00) != (base & 0xFF00);
+
+    let value = cpu.read(addr);
+    (value, page_crossed)
 }
 
 fn adc(cpu: &mut CPU, value : u8) {
@@ -131,33 +155,47 @@ fn adc_immediate(cpu: &mut CPU) -> u8 {
 }
 
 fn adc_zeropage(cpu: &mut CPU) -> u8 {
+    let value = zeropage(cpu);
+    adc(cpu, value);
 
     0
 }
 
 fn adc_zeropagex(cpu: &mut CPU) -> u8 {
-
+    let value = zeropagex(cpu);
+    adc(cpu, value);
     0
 }
 
 fn adc_absolute(cpu: &mut CPU) -> u8 {
-    
+    let value = absolute(cpu);
+    adc(cpu, value);
     0
 }
 
 fn adc_absolutex(cpu: &mut CPU) -> u8 {
-    
+    let value = absolutex(cpu);
+    adc(cpu, value.0);
+
+     if value.1 {1} else {0}
 }
 
 fn adc_absolutey(cpu: &mut CPU) -> u8 {
-    
+    let value = absolutey(cpu);
+    adc(cpu, value.0);
+
+     if value.1 {1} else {0}
 }
 
 fn adc_indirectx(cpu: &mut CPU) -> u8 {
-    
+    let value = indirectx(cpu);
+    adc(cpu, value);
     0
 }
 
 fn adc_indirecty(cpu: &mut CPU) -> u8 {
-    
+    let value = indirecty(cpu);
+    adc(cpu, value.0);
+
+     if value.1 {1} else {0}
 }
