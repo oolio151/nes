@@ -1,3 +1,5 @@
+use crate::cpu;
+
 use super::CPU;
 
 // https://www.nesdev.org/wiki/Instruction_reference
@@ -15,12 +17,22 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         0x71 => (adc_indirecty, 5),
 
         // AND - bitwise and | A = A & memory
+        0x29 => (and_immediate,2),
+        0x25 => (and_zeropage, 3),
+        0x35 => (and_zeropagex, 4),
+        0x2D => (and_absolute, 4),
+        0x3D => (and_absolutex, 4),
+        0x39 => (and_absolutey, 4),
+        0x21 => (and_indirectx, 6),
+        0x31 => (and_indirecty, 5),
 
+        // ASL - arithmetic shift left | value = value << 1
         
         _ => panic!("unknown opcode: {:02X}", opcode)
     }
 }
 
+// addressing modes
 fn immediate(cpu: &mut CPU) -> u8 {
     let value = cpu.read(cpu.pc);
     cpu.pc += 1;
@@ -113,6 +125,7 @@ fn indirecty(cpu: &mut CPU) -> (u8, bool) {
     (value, page_crossed)
 }
 
+// add with carry
 fn adc(cpu: &mut CPU, value : u8) {
     let carry_in = cpu.p & 0x01;
 
@@ -198,4 +211,76 @@ fn adc_indirecty(cpu: &mut CPU) -> u8 {
     adc(cpu, value.0);
 
      if value.1 {1} else {0}
+}
+
+// bitwise and
+
+fn and(cpu: &mut CPU, value : u8){
+    let result = cpu.a & value;
+    cpu.a = result;
+
+    if result == 0 {cpu.p |= 0x02} else {cpu.p &= !0x02}
+
+    if result & 0x80 != 0 {cpu.p |= 0x80} else {cpu.p &= !0x08} 
+}
+
+fn and_immediate(cpu: &mut CPU) -> u8{
+    let value = immediate(cpu);
+    and(cpu, value);
+
+    0
+}
+
+fn and_zeropage(cpu: &mut CPU) -> u8 {
+    let value = zeropage(cpu);
+    and(cpu, value);
+
+    0
+}
+
+fn and_zeropagex(cpu: &mut CPU) -> u8 {
+    let value = zeropagex(cpu);
+    and(cpu, value);
+    0
+}
+
+fn and_absolute(cpu: &mut CPU) -> u8 {
+    let value = absolute(cpu);
+    and(cpu, value);
+    0
+}
+
+fn and_absolutex(cpu: &mut CPU) -> u8 {
+    let value = absolutex(cpu);
+    and(cpu, value.0);
+
+     if value.1 {1} else {0}
+}
+
+fn and_absolutey(cpu: &mut CPU) -> u8 {
+    let value = absolutey(cpu);
+    and(cpu, value.0);
+
+     if value.1 {1} else {0}
+}
+
+fn and_indirectx(cpu: &mut CPU) -> u8 {
+    let value = indirectx(cpu);
+    and(cpu, value);
+    0
+}
+
+fn and_indirecty(cpu: &mut CPU) -> u8 {
+    let value = indirecty(cpu);
+    and(cpu, value.0);
+
+     if value.1 {1} else {0}
+}
+
+//arithmetic shift left
+fn asl(cpu: &mut CPU, value : u8) {
+
+    if (value & 0x80) != 0 {cpu.p |= 0x01} else {cpu.p &= !0x01};
+    
+
 }

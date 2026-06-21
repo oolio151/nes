@@ -21,6 +21,16 @@ pub struct CPU {
     pc: u16, //program counter
     s: u8, //stack pointer
     p: u8, //status register
+    /*status register guides
+    bit 7 (high) - negative
+    bit 6 - overflow
+    bit 5 - always 1
+    bit 4 - the b flag, read the wiki idk
+    bit 3 - decimal
+    bit 2 - interrupt disable
+    bit 1 - zero flag
+    bit 0 - carry flag
+     */
     cycle_count: u64 //used to keep cycles in track with the ppu
 }
 
