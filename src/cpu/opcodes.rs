@@ -129,6 +129,20 @@ fn indirecty(cpu: &mut CPU) -> (u16, bool) {
     (addr, page_crossed)
 }
 
+fn relative(cpu: &mut CPU) -> (u16, bool) {
+    let byte: u8 = cpu.read(cpu.pc);
+    cpu.pc += 1;
+
+    let signed = byte as i8;
+
+    let base = cpu.pc;
+    let target = (base as i16).wrapping_add(signed as i16) as u16;
+
+    let page_crossed = (target & 0xFF00) != (base & 0xFF00);
+
+    (target, page_crossed)
+}
+
 // add with carry
 fn adc(cpu: &mut CPU, value : u8) {
     let carry_in = cpu.p & 0x01;
@@ -270,7 +284,7 @@ fn asl(cpu: &mut CPU, value : u8) -> u8{
 
     cpu.set_flag(cpu::Flag::Carry, (value & 0x80) != 0);
     
-    let result = value << 0;
+    let result = value << 1;
     cpu.set_flag(cpu::Flag::Zero, result == 0);
     cpu.set_flag(cpu::Flag::Negative, result & 0b1000_0000 != 0);
 
@@ -328,6 +342,14 @@ fn asl_absolutex(cpu: &mut CPU) -> u8 {
     0
 }
 
-fn bcc(cpu: &mut CPU, value : u8) -> u8 {
-    
+fn bcc(cpu: &mut CPU) -> u8 {
+    let value = relative(cpu);
+
+    if cpu.get_flag(cpu::Flag::Carry) {
+        0
+    } else {
+        cpu.pc = value.0;
+
+        if value.1 {2} else {1}
+    }
 }
