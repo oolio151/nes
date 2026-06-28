@@ -27,6 +27,13 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         0x31 => (and_indirecty, 5),
 
         // ASL - arithmetic shift left | value = value << 1
+        0x0A => (asl_accumulator, 2),
+        0x06 => (asl_zeropage, 5),
+        0x16 => (asl_absolute, 6),
+        0x0E => (asl_absolutex, 7),
+
+        // BCC - branch if carry clear
+        0x90 => (bcc_relative, 2),
         
         _ => panic!("unknown opcode: {:02X}", opcode)
     }
@@ -40,33 +47,33 @@ fn immediate(cpu: &mut CPU) -> u8 {
     value
 }
 
-fn zeropage(cpu: &mut CPU) -> u8 {
+fn zeropage(cpu: &mut CPU) -> u16 {
     let byte: u8 = cpu.read(cpu.pc);
     cpu.pc += 1;
 
-    cpu.read(byte as u16)
+    byte as u16
 }
 
-fn zeropagex(cpu: &mut CPU) -> u8 {
+fn zeropagex(cpu: &mut CPU) -> u16 {
     let byte: u8 = cpu.read(cpu.pc);
     cpu.pc += 1;
 
     let addr: u8 = byte.wrapping_add(cpu.x);
 
-    cpu.read(addr as u16)
+    addr as u16
 }
 
-fn absolute(cpu: &mut CPU) -> u8{
+fn absolute(cpu: &mut CPU) -> u16{
     let low = cpu.read(cpu.pc);
     cpu.pc +=1;
     let high = cpu.read(cpu.pc);
     cpu.pc += 1;
     let addr: u16 = ((high as u16) << 8) | (low as u16);
 
-    cpu.read(addr)
+    addr
 }
 
-fn absolutex(cpu: &mut CPU) -> (u8, bool) {
+fn absolutex(cpu: &mut CPU) -> (u16, bool) {
     let lo = cpu.read(cpu.pc) as u16;
     let hi = cpu.read(cpu.pc + 1) as u16;
     cpu.pc += 2;
@@ -76,11 +83,10 @@ fn absolutex(cpu: &mut CPU) -> (u8, bool) {
 
     let page_crossed = (addr & 0xFF00) != (base & 0xFF00);
 
-    let value = cpu.read(addr);
-    (value, page_crossed)
+    (addr, page_crossed)
 }
 
-fn absolutey(cpu: &mut CPU) -> (u8, bool) {
+fn absolutey(cpu: &mut CPU) -> (u16, bool) {
     let lo = cpu.read(cpu.pc) as u16;
     let hi = cpu.read(cpu.pc + 1) as u16;
     cpu.pc += 2;
@@ -90,11 +96,10 @@ fn absolutey(cpu: &mut CPU) -> (u8, bool) {
 
     let page_crossed = (addr & 0xFF00) != (base & 0xFF00);
 
-    let value = cpu.read(addr);
-    (value, page_crossed)
+    (addr, page_crossed)
 }
 
-fn indirectx(cpu: &mut CPU) -> u8 {
+fn indirectx(cpu: &mut CPU) -> u16 {
     let byte: u8 = cpu.read(cpu.pc);
     cpu.pc += 1;
 
@@ -105,10 +110,10 @@ fn indirectx(cpu: &mut CPU) -> u8 {
 
     let addr: u16 = ((hi as u16) << 8) | (lo as u16);
 
-    cpu.read(addr)
+    addr
 }
 
-fn indirecty(cpu: &mut CPU) -> (u8, bool) {
+fn indirecty(cpu: &mut CPU) -> (u16, bool) {
     let byte = cpu.read(cpu.pc);
     cpu.pc += 1;
 
@@ -121,8 +126,7 @@ fn indirecty(cpu: &mut CPU) -> (u8, bool) {
 
     let page_crossed = (addr & 0xFF00) != (base & 0xFF00);
 
-    let value = cpu.read(addr);
-    (value, page_crossed)
+    (addr, page_crossed)
 }
 
 // add with carry
@@ -132,30 +136,14 @@ fn adc(cpu: &mut CPU, value : u8) {
     let sum: u16 = cpu.a as u16 + value as u16 + carry_in as u16;
     let result: u8 = sum as u8;
 
-    if sum > 0xFF {
-        cpu.p |= 0x01;
-    } else {
-        cpu.p &= !0x01;
-    }
+    cpu.set_flag(cpu::Flag::Carry, sum > 0xFF);
 
-    if result == 0 {
-        cpu.p |= 0x02;
-    } else {
-        cpu.p &= !0x02;
-    }
+    cpu.set_flag(cpu::Flag::Zero, result == 0);
 
     let overflow = (result ^ cpu.a) & (result ^ value) & 0x80;
-    if overflow != 0 {
-        cpu.p |= 0x40;
-    } else {
-        cpu.p &= !0x40;
-    }
+    cpu.set_flag(cpu::Flag::Overflow, overflow != 0);
 
-    if result & 0x80 != 0 {
-        cpu.p |= 0x80;
-    } else {
-        cpu.p &= !0x80;
-    }
+   cpu.set_flag(cpu::Flag::Negative, result & 0x80 != 0);
 
     cpu.a = result;
 }
@@ -169,46 +157,46 @@ fn adc_immediate(cpu: &mut CPU) -> u8 {
 
 fn adc_zeropage(cpu: &mut CPU) -> u8 {
     let value = zeropage(cpu);
-    adc(cpu, value);
+    adc(cpu, cpu.read(value));
 
     0
 }
 
 fn adc_zeropagex(cpu: &mut CPU) -> u8 {
     let value = zeropagex(cpu);
-    adc(cpu, value);
+    adc(cpu, cpu.read(value));
     0
 }
 
 fn adc_absolute(cpu: &mut CPU) -> u8 {
     let value = absolute(cpu);
-    adc(cpu, value);
+    adc(cpu, cpu.read(value));
     0
 }
 
 fn adc_absolutex(cpu: &mut CPU) -> u8 {
     let value = absolutex(cpu);
-    adc(cpu, value.0);
+    adc(cpu, cpu.read(value.0));
 
      if value.1 {1} else {0}
 }
 
 fn adc_absolutey(cpu: &mut CPU) -> u8 {
     let value = absolutey(cpu);
-    adc(cpu, value.0);
+    adc(cpu, cpu.read(value.0));
 
      if value.1 {1} else {0}
 }
 
 fn adc_indirectx(cpu: &mut CPU) -> u8 {
     let value = indirectx(cpu);
-    adc(cpu, value);
+    adc(cpu, cpu.read(value));
     0
 }
 
 fn adc_indirecty(cpu: &mut CPU) -> u8 {
     let value = indirecty(cpu);
-    adc(cpu, value.0);
+    adc(cpu, cpu.read(value.0));
 
      if value.1 {1} else {0}
 }
@@ -219,9 +207,9 @@ fn and(cpu: &mut CPU, value : u8){
     let result = cpu.a & value;
     cpu.a = result;
 
-    if result == 0 {cpu.p |= 0x02} else {cpu.p &= !0x02}
+    cpu.set_flag(cpu::Flag::Zero, result == 0);
 
-    if result & 0x80 != 0 {cpu.p |= 0x80} else {cpu.p &= !0x08} 
+    cpu.set_flag(cpu::Flag::Negative, result & 0x80 != 0);
 }
 
 fn and_immediate(cpu: &mut CPU) -> u8{
@@ -233,54 +221,113 @@ fn and_immediate(cpu: &mut CPU) -> u8{
 
 fn and_zeropage(cpu: &mut CPU) -> u8 {
     let value = zeropage(cpu);
-    and(cpu, value);
+    and(cpu, cpu.read(value));
 
     0
 }
 
 fn and_zeropagex(cpu: &mut CPU) -> u8 {
     let value = zeropagex(cpu);
-    and(cpu, value);
+    and(cpu, cpu.read(value));
     0
 }
 
 fn and_absolute(cpu: &mut CPU) -> u8 {
     let value = absolute(cpu);
-    and(cpu, value);
+    and(cpu, cpu.read(value));
     0
 }
 
 fn and_absolutex(cpu: &mut CPU) -> u8 {
     let value = absolutex(cpu);
-    and(cpu, value.0);
+    and(cpu, cpu.read(value.0));
 
      if value.1 {1} else {0}
 }
 
 fn and_absolutey(cpu: &mut CPU) -> u8 {
     let value = absolutey(cpu);
-    and(cpu, value.0);
+    and(cpu, cpu.read(value.0));
 
      if value.1 {1} else {0}
 }
 
 fn and_indirectx(cpu: &mut CPU) -> u8 {
     let value = indirectx(cpu);
-    and(cpu, value);
+    and(cpu, cpu.read(value));
     0
 }
 
 fn and_indirecty(cpu: &mut CPU) -> u8 {
     let value = indirecty(cpu);
-    and(cpu, value.0);
+    and(cpu, cpu.read(value.0));
 
      if value.1 {1} else {0}
 }
 
 //arithmetic shift left
-fn asl(cpu: &mut CPU, value : u8) {
+fn asl(cpu: &mut CPU, value : u8) -> u8{
 
-    if (value & 0x80) != 0 {cpu.p |= 0x01} else {cpu.p &= !0x01};
+    cpu.set_flag(cpu::Flag::Carry, (value & 0x80) != 0);
     
+    let result = value << 0;
+    cpu.set_flag(cpu::Flag::Zero, result == 0);
+    cpu.set_flag(cpu::Flag::Negative, result & 0b1000_0000 != 0);
 
+
+    result
+}
+
+fn asl_accumulator(cpu: &mut CPU) -> u8 {
+    let result = asl(cpu, cpu.a);
+    cpu.a = result;
+    0
+}
+
+fn asl_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    let value = cpu.read(addr);
+
+    let result = asl(cpu, value);
+
+    cpu.write(addr, result);
+
+    0
+}
+
+fn asl_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagex(cpu);
+    let value = cpu.read(addr);
+
+    let result = asl(cpu, value);
+
+    cpu.write(addr, result);
+
+    0
+}
+
+fn asl_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    let value = cpu.read(addr);
+
+    let result = asl(cpu, value);
+
+    cpu.write(addr, result);
+
+    0
+}
+
+fn asl_absolutex(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutex(cpu);
+    let value = cpu.read(addr);
+
+    let result = asl(cpu, value);
+
+    cpu.write(addr, result);
+
+    0
+}
+
+fn bcc(cpu: &mut CPU, value : u8) -> u8 {
+    
 }

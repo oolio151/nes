@@ -118,4 +118,18 @@ impl CPU {
         }
     }
 
+    pub fn get_flag(&self, flag : Flag) -> bool {
+        let mask: u8 = match flag {
+            Flag::Carry            => 0b0000_0001,
+            Flag::Zero             => 0b0000_0010,
+            Flag::InterruptDisable => 0b0000_0100,
+            Flag::Decimal          => 0b0000_1000,
+            Flag::B                => 0b0001_0000,
+            Flag::Overflow         => 0b0100_0000,
+            Flag::Negative         => 0b1000_0000,
+        };
+
+        (self.p & mask) != 0
+    }
+
 }
