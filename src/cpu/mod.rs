@@ -1,4 +1,5 @@
-mod opcodes;
+pub mod opcodes;
+pub mod ops;
 
 pub enum Flag {
     Carry,
@@ -24,12 +25,12 @@ pub struct CPU {
     - 0x6000 - 0x7FFF usually cartridge RAM when present
     - 0x8000 - 0xFFFF usually cartridge ROM and mapper registers
      */
-    a: u8,
-    x: u8,
-    y: u8,
-    pc: u16, //program counter
-    s: u8, //stack pointer
-    p: u8, //status register
+    pub a: u8,
+    pub x: u8,
+    pub y: u8,
+    pub pc: u16, //program counter
+    pub s: u8, //stack pointer
+    pub p: u8, //status register
     /*status register guides
     bit 7 (high) - negative
     bit 6 - overflow
