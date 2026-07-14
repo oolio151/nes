@@ -49,11 +49,13 @@ impl CPU {
             Self {
                 memory: [0; 65536],
                 a: 0,
-                x: 0,
-                y: 0,
+                x: 0, // for addressing modes
+                y: 0, // for addressing modes
                 pc: 0xFFFC,
+                // stack pointer
+                // to write to stack, write to 0x0100 + cpu.s as u16
                 s: 0xFD,
-                p: 0,
+                p: 0, // status register
                 cycle_count: 0
 
             }

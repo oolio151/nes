@@ -1,10 +1,13 @@
 #![allow(dead_code)] // all the yellow squiggles are a bitch, no more
 
-use crate::cpu;
+//use crate::cpu;
 use crate::cpu::ops::arithmetic::*;
 use crate::cpu::ops::bitwise::*;
 use crate::cpu::ops::shift::*;
 use crate::cpu::ops::branch::*;
+use crate::cpu::ops::jump::*;
+use crate::cpu::ops::flags::*;
+use crate::cpu::ops::compare::*;
 
 use super::CPU;
 
@@ -12,7 +15,7 @@ use super::CPU;
 pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
     match opcode {
 
-        // ADC - add with carry | A = A + memory + C
+        // add with carry | A = A + memory + C
         0x69 => (adc_immediate, 2),
         0x65 => (adc_zeropage, 3),
         0x75 => (adc_zeropagex, 4),
@@ -22,7 +25,7 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         0x61 => (adc_indirectx, 6),
         0x71 => (adc_indirecty, 5),
 
-        // AND - bitwise and | A = A & memory
+        // bitwise and | A = A & memory
         0x29 => (and_immediate,2),
         0x25 => (and_zeropage, 3),
         0x35 => (and_zeropagex, 4),
@@ -32,36 +35,70 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         0x21 => (and_indirectx, 6),
         0x31 => (and_indirecty, 5),
 
-        // ASL - arithmetic shift left | value = value << 1
+        // arithmetic shift left | value = value << 1
         0x0A => (asl_accumulator, 2),
         0x06 => (asl_zeropage, 5),
         0x16 => (asl_zeropagex, 6),
         0x0E => (asl_absolute, 6),
         0x1E => (asl_absolutex, 7),
 
-        // BCC - branch if carry clear
+        // branch if carry clear
         0x90 => (bcc, 2),
 
-        // BCS - branch if carry set
+        // branch if carry set
         0xB0 => (bcs, 2),
 
-        // BEQ - branch if equal
+        // branch if equal
         0xF0 => (beq, 2),
 
-        // BIT - bit test
+        // bit test
         0x24 => (bit_zeropage, 3),
         0x2C => (bit_absolute, 4),
 
-        // BMI - branch if minus
+        // branch if minus
         0x30 => (bmi, 2),
 
-        // BNE - branch if not equal
+        // branch if not equal
         0xD0 => (bne, 2),
 
-        // BPL - branch if plus
+        // branch if plus
         0x10 => (bpl, 2),
 
+        // break (software iq) <- dunno what ts means
+        0x00 => (brk, 0),
+
+        // branch if carry clear
+        0x50 => (bvc, 2),
+
+        // branch if carry set
+        0x70 => (bvs, 2),
+
+        // clear carry, decimal, interruptdisable, and overflow
+        0x18 => (clc, 2),
+        0xD8 => (cld, 2),
+        0x58 => (cli, 2),
+        0xB8 => (clv, 2),
+
+        // compare a
+        0xC9 => (cmp_immediate, 2),
+        0xC5 => (cmp_zeropage, 3),
+        0xD5 => (cmp_zeropagex, 4),
+        0xCD => (cmp_absolute, 4),
+        0xDD => (cmp_absolutex, 4),
+        0xD9 => (cmp_absolutey, 4),
+        0xC1 => (cmp_indirectx, 6),
+        0xD1 => (cmp_indirecty, 5),
+
+        // compare x
+        0xE0 => (cpx_immediate, 2),
+        0xE4 => (cpx_zeropage, 3),
+        0xEC => (cpx_absolute, 4),
         
+        // compare y
+        0xC0 => (cpy_immediate, 2),
+        0xC4 => (cpy_zeropage, 3),
+        0xCC => (cpy_absolute, 4),
+
         _ => panic!("unknown opcode: {:02X}", opcode)
     }
 }

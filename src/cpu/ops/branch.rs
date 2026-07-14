@@ -41,13 +41,61 @@ pub fn beq(cpu: &mut CPU) -> u8 {
 
 
 pub fn bmi(cpu: &mut CPU) -> u8 {
-    0
+    let value = relative(cpu);
+
+    if !cpu.get_flag(Flag::Negative) {
+        0
+    } else {
+        cpu.pc = value.0;
+
+        if value.1 {2} else {1}
+    }
 }
 
 pub fn bne(cpu: &mut CPU) -> u8 {
-    0
+    let value = relative(cpu);
+
+    if cpu.get_flag(Flag::Zero) {
+        0
+    } else {
+        cpu.pc = value.0;
+
+        if value.1 {2} else {1}
+    }
 }
 
 pub fn bpl(cpu: &mut CPU) -> u8 {
-    0
+    let value = relative(cpu);
+
+    if cpu.get_flag(Flag::Negative) {
+        0
+    } else {
+        cpu.pc = value.0;
+
+        if value.1 {2} else {1}
+    }
+}
+
+pub fn bvc(cpu: &mut CPU) -> u8 {
+    let value = relative(cpu);
+
+    if cpu.get_flag(Flag::Overflow) {
+        0
+    } else {
+        cpu.pc = value.0;
+
+        if value.1 {2} else {1}
+    }
+}
+
+pub fn bvs(cpu: &mut CPU) -> u8 {
+    let value = relative(cpu);
+
+    if !cpu.get_flag(Flag::Overflow) {
+        0
+    } else {
+        cpu.pc = value.0;
+
+        if value.1 {2} else {1}
+    }
 }
