@@ -73,3 +73,157 @@ pub fn adc_indirecty(cpu: &mut CPU) -> u8 {
 
      if value.1 {1} else {0}
 }
+
+fn dec(cpu: &mut CPU, value: u8) -> u8 {
+    let result = value.wrapping_sub(1);
+
+    cpu.set_flag(Flag::Zero, result == 0);
+    cpu.set_flag(Flag::Negative, result & 0b1000_0000 != 0);
+
+    result
+}
+
+pub fn dec_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    let value = cpu.read(addr);
+
+    let result = dec(cpu, value);
+
+    cpu.write(addr, result);
+
+    0
+}
+
+
+pub fn dec_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagex(cpu);
+    let value = cpu.read(addr);
+
+    let result = dec(cpu, value);
+
+    cpu.write(addr, result);
+
+    0
+}
+
+
+pub fn dec_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    let value = cpu.read(addr);
+
+    let result = dec(cpu, value);
+
+    cpu.write(addr, result);
+
+    0
+}
+
+pub fn dec_absolutex(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutex(cpu);
+    let value = cpu.read(addr);
+
+    let result = dec(cpu, value);
+
+    cpu.write(addr, result);
+
+    0
+}
+
+pub fn dex(cpu: &mut CPU) -> u8 {
+
+    let result = cpu.x.wrapping_sub(1);
+    cpu.x = result;
+
+    cpu.set_flag(Flag::Zero, result == 0);
+    cpu.set_flag(Flag::Negative, result & 0b1000_0000 != 0);
+
+    0
+}
+
+pub fn dey(cpu: &mut CPU) -> u8 {
+
+    let result = cpu.y.wrapping_sub(1);
+    cpu.y = result;
+
+    cpu.set_flag(Flag::Zero, result == 0);
+    cpu.set_flag(Flag::Negative, result & 0b1000_0000 != 0);
+
+    0
+}
+
+    fn inc(cpu: &mut CPU, value: u8) -> u8 {
+        let result = value.wrapping_add(1);
+
+        cpu.set_flag(Flag::Zero, result == 0);
+        cpu.set_flag(Flag::Negative, result & 0b1000_0000 != 0);
+
+        result
+    }
+
+    pub fn inc_zeropage(cpu: &mut CPU) -> u8 {
+        let addr = zeropage(cpu);
+        let value = cpu.read(addr);
+
+        let result = inc(cpu, value);
+
+        cpu.write(addr, result);
+
+        0
+    }
+
+
+    pub fn inc_zeropagex(cpu: &mut CPU) -> u8 {
+        let addr = zeropagex(cpu);
+        let value = cpu.read(addr);
+
+        let result = inc(cpu, value);
+
+        cpu.write(addr, result);
+
+        0
+    }
+
+
+    pub fn inc_absolute(cpu: &mut CPU) -> u8 {
+        let addr = absolute(cpu);
+        let value = cpu.read(addr);
+
+        let result = inc(cpu, value);
+
+        cpu.write(addr, result);
+
+        0
+    }
+
+    pub fn inc_absolutex(cpu: &mut CPU) -> u8 {
+        let (addr, _page_crossed) = absolutex(cpu);
+        let value = cpu.read(addr);
+
+        let result = inc(cpu, value);
+
+        cpu.write(addr, result);
+
+        0
+    }
+
+    pub fn inx(cpu: &mut CPU) -> u8 {
+
+        let result = cpu.x.wrapping_add(1);
+        cpu.x = result;
+
+        cpu.set_flag(Flag::Zero, result == 0);
+        cpu.set_flag(Flag::Negative, result & 0b1000_0000 != 0);
+
+        0
+    }
+
+    pub fn iny(cpu: &mut CPU) -> u8 {
+
+        let result = cpu.y.wrapping_add(1);
+        cpu.y = result;
+
+        cpu.set_flag(Flag::Zero, result == 0);
+        cpu.set_flag(Flag::Negative, result & 0b1000_0000 != 0);
+
+        0
+    }

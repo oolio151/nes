@@ -19,6 +19,7 @@ pub fn brk(cpu: &mut CPU) -> u8 {
     let lo = cpu.read(0xFFFE) as u16;
     let hi = cpu.read(0xFFFF) as u16;
     cpu.pc = (hi << 8) | lo;
-    
+
     0
 }
+

@@ -99,6 +99,39 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         0xC4 => (cpy_zeropage, 3),
         0xCC => (cpy_absolute, 4),
 
+        // decrement memory
+        0xC6 => (dec_zeropage, 5),
+        0xD6 => (dec_zeropagex, 6),
+        0xCE => (dec_absolute, 6),
+        0xDE => (dec_absolutex, 7),
+
+        // decrement x register
+        0xCA => (dex, 2),
+
+        // decrement y register
+        0x88 => (dey, 2),
+
+        // xor
+        0x49 => (eor_immediate, 2),
+        0x45 => (eor_zeropage, 3),
+        0x55 => (eor_zeropagex, 4),
+        0x4D => (eor_absolute, 4),
+        0x5D => (eor_absolutey, 4),
+        0x41 => (eor_indirectx, 6),
+        0x51 => (eor_indirecty, 5),
+
+        // increment memory
+        0xE6 => (inc_zeropage, 5),
+        0xF6 => (inc_zeropagex, 6),
+        0xEE => (inc_absolute, 6),
+        0xFE => (inc_absolutex, 7),
+
+        // increment x register
+        0xE8 => (inx, 2),
+
+        // increment y register
+        0xC8 => (iny, 2),
+
         _ => panic!("unknown opcode: {:02X}", opcode)
     }
 }
