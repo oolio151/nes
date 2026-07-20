@@ -8,6 +8,9 @@ use crate::cpu::ops::branch::*;
 use crate::cpu::ops::jump::*;
 use crate::cpu::ops::flags::*;
 use crate::cpu::ops::compare::*;
+use crate::cpu::ops::access::*;
+use crate::cpu::ops::other::*;
+
 
 use super::CPU;
 
@@ -132,6 +135,47 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         // increment y register
         0xC8 => (iny, 2),
 
+        // jump
+        0x4C => (jmp_absolute, 3),
+        0x6C => (jmp_indirect, 5),
+
+        // jump to subroutine
+        0x20 => (jsr, 6),
+
+        // load into accumulator
+        0xA9 => (lda_immediate, 2),
+        0xA5 => (lda_zeropage, 3),
+        0xB5 => (lda_zeropagex, 4),
+        0xAD => (lda_absolute, 4),
+        0xBD => (lda_absolutex, 4),
+        0xB9 => (lda_absolutey, 4),
+        0xA1 => (lda_indirectx, 6),
+        0xB1 => (lda_indirecty, 5),
+
+        // load into x register
+        0xA2 => (ldx_immediate, 2),
+        0xA6 => (ldx_zeropage, 3),
+        0xB6 => (ldx_zeropagey, 4),
+        0xAE => (ldx_absolute, 4),
+        0xBE => (ldx_absolutey, 4),
+
+        // load into y register
+        0xA0 => (ldy_immediate, 2),
+        0xA4 => (ldy_zeropage, 3),
+        0xB4 => (ldy_zeropagex, 4),
+        0xAC => (ldy_absolute, 4),
+        0xBC => (ldy_absolutex, 4),
+
+        // logical shift right
+        0x4A => (lsr_accumulator, 2),
+        0x46 => (lsr_zeropage, 5),
+        0x56 => (lsr_zeropagex, 6),
+        0x4E => (lsr_absolute, 6),
+        0x5E => (lsr_absolutex, 7),
+
+        // nothing
+        0xEA => (nop, 2),
+
         _ => panic!("unknown opcode: {:02X}", opcode)
     }
 }
@@ -156,6 +200,15 @@ pub fn zeropagex(cpu: &mut CPU) -> u16 {
     cpu.pc += 1;
 
     let addr: u8 = byte.wrapping_add(cpu.x);
+
+    addr as u16
+}
+
+pub fn zeropagey(cpu: &mut CPU) -> u16 {
+    let byte: u8 = cpu.read(cpu.pc);
+    cpu.pc += 1;
+
+    let addr: u8 = byte.wrapping_add(cpu.y);
 
     addr as u16
 }

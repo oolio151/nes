@@ -23,3 +23,42 @@ pub fn brk(cpu: &mut CPU) -> u8 {
     0
 }
 
+// jmp is weird af so the functions dont follow usual structure
+pub fn jmp_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    cpu.pc = addr;
+
+    0
+}
+
+// theres a cpu bug where it doesnt page cross properly
+pub fn jmp_indirect(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+
+    let lo = cpu.read(addr);
+
+    let hi = if (addr & 0x00FF) == 0x00FF {
+        cpu.read(addr & 0xFF00)
+    } else {
+        cpu.read(addr + 1)
+    };
+
+    let target: u16 = ((hi as u16) << 8) | (lo as u16);
+
+    cpu.pc = target;
+
+    0
+}
+
+pub fn jsr(cpu: &mut CPU) -> u8 {
+    let target = absolute(cpu);
+
+    let return_addr = cpu.pc.wrapping_sub(1);
+    cpu.write(0x0100 + cpu.s as u16, (return_addr >> 8) as u8);
+    cpu.s = cpu.s.wrapping_sub(1);
+    cpu.write(0x0100 + cpu.s as u16, (return_addr & 0xFF) as u8);
+    cpu.s = cpu.s.wrapping_sub(1);
+
+    cpu.pc = target;
+    0
+}
