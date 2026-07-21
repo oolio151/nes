@@ -1,6 +1,6 @@
 use crate::cpu::CPU;
 use crate::cpu::Flag;
-use crate::cpu::opcodes::{immediate, zeropage, zeropagex, absolute, absolutex, absolutey, indirectx, indirecty};
+use crate::cpu::opcodes::{zeropage, zeropagex, absolute, absolutex};
 
 //arithmetic shift left
 fn asl(cpu: &mut CPU, value : u8) -> u8{

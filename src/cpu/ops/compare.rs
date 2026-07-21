@@ -1,4 +1,3 @@
-use crate::cpu;
 use crate::cpu::CPU;
 use crate::cpu::Flag;
 use crate::cpu::opcodes::{immediate, zeropage, zeropagex, absolute, absolutex, absolutey, indirectx, indirecty};

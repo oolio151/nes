@@ -119,7 +119,8 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         0x45 => (eor_zeropage, 3),
         0x55 => (eor_zeropagex, 4),
         0x4D => (eor_absolute, 4),
-        0x5D => (eor_absolutey, 4),
+        0x5D => (eor_absolutex, 4),
+        0x59 => (eor_absolutey, 4),
         0x41 => (eor_indirectx, 6),
         0x51 => (eor_indirecty, 5),
 

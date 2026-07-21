@@ -1,6 +1,5 @@
 use crate::cpu::CPU;
 use crate::cpu::Flag;
-use crate::cpu::opcodes::{immediate, zeropage, absolute, absolutex, absolutey, indirectx, indirecty};
 
 pub fn pha(cpu: &mut CPU) -> u8 {
     cpu.write(0x0100 + cpu.s as u16, cpu.a);

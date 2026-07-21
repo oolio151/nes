@@ -1,6 +1,6 @@
 use crate::cpu::CPU;
 
-pub fn nop(cpu: &mut CPU) -> u8 {
+pub fn nop(_cpu: &mut CPU) -> u8 {
     // hes lonely :(, so i wrote some stuff below
     /* 
         pokemon.nonVolatileStatus = status;

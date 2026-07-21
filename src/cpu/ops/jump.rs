@@ -1,6 +1,6 @@
 use crate::cpu::CPU;
 use crate::cpu::Flag;
-use crate::cpu::opcodes::{immediate, zeropage, absolute, absolutex, absolutey, indirectx, indirecty};
+use crate::cpu::opcodes::absolute;
 
 pub fn brk(cpu: &mut CPU) -> u8 {
     cpu.pc += 1;
