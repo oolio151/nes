@@ -54,16 +54,22 @@ impl CPU {
                 pc: 0xFFFC,
                 // stack pointer
                 // to write to stack, write to 0x0100 + cpu.s as u16
-                s: 0xFD,
-                p: 0, // status register
+                s: 0b1111_1101,
+                p: 0b0010_0000, // status register
                 cycle_count: 0
 
             }
             
     }
 
-    pub fn read(&self, address : u16) -> u8{
-        return self.memory[address as usize];
+    pub fn read(&self, address : u16) -> u8 {
+        if address <= 0x1FFF {
+            self.memory[(address & 0x07FF) as usize]
+        } else if address >= 0x2000 && address <= 0x3FFF {
+            self.memory[(0x2000 + (address & 0x0007)) as usize]
+        } else {
+            self.memory[address as usize]
+        }
     }
 
     pub fn write(&mut self, address : u16, data : u8) {
@@ -71,26 +77,26 @@ impl CPU {
         self.memory[(address & 0x07FF) as usize] = data;
 
         } else if address >= 0x2000 && address <= 0x3FFF {
-            self.memory[(address & 0x0007) as usize] = data;
+            self.memory[(0x2000 + (address & 0x0007)) as usize] = data;
         }
 
         else {self.memory[address as usize] = data;}
     }
 
     pub fn reset(&mut self){
-        self.memory = [0; 65536];
+        //self.memory = [0; 65536];
         self.a = 0;
         self.x = 0;
         self.y = 0;
         self.pc = (self.read(0xFFFC) as u16) | ((self.read(0xFFFD) as u16) << 8);
         self.s = 0xFD;
-        self.p = 0;
+        self.p = 0b0010_0000;
         self.cycle_count = 0;
     }
 
     pub fn tick(&mut self) -> u8 {
         let opcode: u8 = self.read(self.pc);
-        self.pc += 1;
+        self.pc = self.pc.wrapping_add(1);
         let (instruction, base_cycles) = opcodes::decode(opcode);
         let extra_cycles = instruction(self);
         let total_cycles = base_cycles + extra_cycles;

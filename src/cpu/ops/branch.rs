@@ -99,3 +99,4 @@ pub fn bvs(cpu: &mut CPU) -> u8 {
         if value.1 {2} else {1}
     }
 }
+

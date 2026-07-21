@@ -115,3 +115,113 @@ pub fn lsr_absolutex(cpu: &mut CPU) -> u8 {
     cpu.write(addr, result);
     0
 }
+
+fn rol(cpu: &mut CPU, value: u8) -> u8 {
+    let old_carry = cpu.get_flag(Flag::Carry);
+
+    cpu.set_flag(Flag::Carry, value & 0b1000_0000 != 0);
+
+    let mut result = value << 1;
+    if old_carry {
+        result |= 0b0000_0001;
+    }
+
+    cpu.set_flag(Flag::Zero, result == 0);
+    cpu.set_flag(Flag::Negative, result & 0b1000_0000 != 0);
+
+    result
+}
+
+pub fn rol_accumulator(cpu: &mut CPU) -> u8 {
+    let value = cpu.a;
+    let result = rol(cpu, value);
+    cpu.a = result;
+    0
+}
+
+pub fn rol_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    let value = cpu.read(addr);
+    let result = rol(cpu, value);
+    cpu.write(addr, result);
+    0
+}
+
+pub fn rol_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagex(cpu);
+    let value = cpu.read(addr);
+    let result = rol(cpu, value);
+    cpu.write(addr, result);
+    0
+}
+
+pub fn rol_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    let value = cpu.read(addr);
+    let result = rol(cpu, value);
+    cpu.write(addr, result);
+    0
+}
+
+pub fn rol_absolutex(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutex(cpu);
+    let value = cpu.read(addr);
+    let result = rol(cpu, value);
+    cpu.write(addr, result);
+    0
+}
+
+fn ror(cpu: &mut CPU, value: u8) -> u8 {
+    let old_carry = cpu.get_flag(Flag::Carry);
+
+    cpu.set_flag(Flag::Carry, value & 0b0000_0001 != 0);
+
+    let mut result = value >> 1;
+    if old_carry {
+        result |= 0b1000_0000;
+    }
+
+    cpu.set_flag(Flag::Zero, result == 0);
+    cpu.set_flag(Flag::Negative, result & 0b1000_0000 != 0);
+
+    result
+}
+
+pub fn ror_accumulator(cpu: &mut CPU) -> u8 {
+    let value = cpu.a;
+    let result = ror(cpu, value);
+    cpu.a = result;
+    0
+}
+
+pub fn ror_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    let value = cpu.read(addr);
+    let result = ror(cpu, value);
+    cpu.write(addr, result);
+    0
+}
+
+pub fn ror_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagex(cpu);
+    let value = cpu.read(addr);
+    let result = ror(cpu, value);
+    cpu.write(addr, result);
+    0
+}
+
+pub fn ror_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    let value = cpu.read(addr);
+    let result = ror(cpu, value);
+    cpu.write(addr, result);
+    0
+}
+
+pub fn ror_absolutex(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutex(cpu);
+    let value = cpu.read(addr);
+    let result = ror(cpu, value);
+    cpu.write(addr, result);
+    0
+}

@@ -70,9 +70,7 @@ pub fn and_indirecty(cpu: &mut CPU) -> u8 {
 pub fn bit(cpu: &mut CPU, value : u8) {
     let result = cpu.a & value;
 
-    if result == 0 {
-        cpu.set_flag(Flag::Zero, true);
-    } 
+    cpu.set_flag(Flag::Zero, result == 0);
 
     cpu.set_flag(Flag::Overflow, value & 0b01000000 != 0);
 
@@ -157,6 +155,71 @@ pub fn eor_indirectx(cpu: &mut CPU) -> u8 {
 pub fn eor_indirecty(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = indirecty(cpu);
     eor(cpu, cpu.read(addr));
+
+    if page_crossed {1} else {0}
+}
+
+fn ora(cpu: &mut CPU, value : u8){
+    let result = cpu.a | value;
+    cpu.a = result;
+
+    cpu.set_flag(Flag::Zero, result == 0);
+
+    cpu.set_flag(Flag::Negative, result & 0x80 != 0);
+}
+
+pub fn ora_immediate(cpu: &mut CPU) -> u8 {
+    let value = immediate(cpu);
+    ora(cpu, value);
+
+    0
+}
+
+pub fn ora_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    ora(cpu, cpu.read(addr));
+
+    0
+}
+
+pub fn ora_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagex(cpu);
+    ora(cpu, cpu.read(addr));
+
+    0
+}
+
+pub fn ora_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    ora(cpu, cpu.read(addr));
+
+    0
+}
+
+pub fn ora_absolutex(cpu: &mut CPU) -> u8 {
+    let (addr, page_crossed) = absolutex(cpu);
+    ora(cpu, cpu.read(addr));
+
+    if page_crossed {1} else {0}
+}
+
+pub fn ora_absolutey(cpu: &mut CPU) -> u8 {
+    let (addr, page_crossed) = absolutey(cpu);
+    ora(cpu, cpu.read(addr));
+
+    if page_crossed {1} else {0}
+}
+
+pub fn ora_indirectx(cpu: &mut CPU) -> u8 {
+    let addr = indirectx(cpu);
+    ora(cpu, cpu.read(addr));
+
+    0
+}
+
+pub fn ora_indirecty(cpu: &mut CPU) -> u8 {
+    let (addr, page_crossed) = indirecty(cpu);
+    ora(cpu, cpu.read(addr));
 
     if page_crossed {1} else {0}
 }

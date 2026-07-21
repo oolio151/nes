@@ -10,7 +10,7 @@ use crate::cpu::ops::flags::*;
 use crate::cpu::ops::compare::*;
 use crate::cpu::ops::access::*;
 use crate::cpu::ops::other::*;
-
+use crate::cpu::ops::stack::*;
 
 use super::CPU;
 
@@ -175,6 +175,42 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
 
         // nothing
         0xEA => (nop, 2),
+
+        // bitwise or
+        0x09 => (ora_immediate, 2),
+        0x05 => (ora_zeropage, 3),
+        0x15 => (ora_zeropagex, 4),
+        0x0D => (ora_absolute, 4),
+        0x1D => (ora_absolutex, 4),
+        0x19 => (ora_absolutey, 4),
+        0x01 => (ora_indirectx, 6),
+        0x11 => (ora_indirecty, 5),
+
+        // push accumulator to stack
+        0x48 => (pha, 3),
+
+        // push status register to stack
+        0x08 => (php, 3),
+
+        // pop from stack into accumulator
+        0x68 => (pla, 4),
+
+        // pop from stack into status register
+        0x28 => (plp, 4),
+
+        // rotate memory value left
+        0x2A => (rol_accumulator, 2),
+        0x26 => (rol_zeropage, 5),
+        0x36 => (rol_zeropagex, 6),
+        0x2E => (rol_absolute, 6),
+        0x3E => (rol_absolutex, 7),
+
+        // rotate memory value right
+        0x6A => (ror_accumulator, 2),
+        0x66 => (ror_zeropage, 5),
+        0x76 => (ror_zeropagex, 6),
+        0x6E => (ror_absolute, 6),
+        0x7E => (ror_absolutex, 7),
 
         _ => panic!("unknown opcode: {:02X}", opcode)
     }
