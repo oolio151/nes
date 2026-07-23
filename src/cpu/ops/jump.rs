@@ -85,8 +85,7 @@ pub fn rts(cpu: &mut CPU) -> u8 {
     cpu.s = cpu.s.wrapping_add(1);
     let hi = cpu.read(0x0100 + cpu.s as u16) as u16;
 
-    cpu.pc = (hi << 8) | lo;
+    cpu.pc = ((hi << 8) | lo).wrapping_add(1);
 
     0
 }
-

@@ -1,1 +1,4 @@
 /target
+/tests/nes6502/
+/tests/results
+/tests/results.txt

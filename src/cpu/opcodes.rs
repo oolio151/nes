@@ -269,21 +269,21 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
 // addressing modes
 pub fn immediate(cpu: &mut CPU) -> u8 {
     let value = cpu.read(cpu.pc);
-    cpu.pc += 1;
+    cpu.pc = cpu.pc.wrapping_add(1);
 
     value
 }
 
 pub fn zeropage(cpu: &mut CPU) -> u16 {
     let byte: u8 = cpu.read(cpu.pc);
-    cpu.pc += 1;
+    cpu.pc = cpu.pc.wrapping_add(1);
 
     byte as u16
 }
 
 pub fn zeropagex(cpu: &mut CPU) -> u16 {
     let byte: u8 = cpu.read(cpu.pc);
-    cpu.pc += 1;
+    cpu.pc = cpu.pc.wrapping_add(1);
 
     let addr: u8 = byte.wrapping_add(cpu.x);
 
@@ -292,7 +292,7 @@ pub fn zeropagex(cpu: &mut CPU) -> u16 {
 
 pub fn zeropagey(cpu: &mut CPU) -> u16 {
     let byte: u8 = cpu.read(cpu.pc);
-    cpu.pc += 1;
+    cpu.pc = cpu.pc.wrapping_add(1);
 
     let addr: u8 = byte.wrapping_add(cpu.y);
 
@@ -301,9 +301,9 @@ pub fn zeropagey(cpu: &mut CPU) -> u16 {
 
 pub fn absolute(cpu: &mut CPU) -> u16{
     let low = cpu.read(cpu.pc);
-    cpu.pc +=1;
+    cpu.pc = cpu.pc.wrapping_add(1);
     let high = cpu.read(cpu.pc);
-    cpu.pc += 1;
+    cpu.pc = cpu.pc.wrapping_add(1);
     let addr: u16 = ((high as u16) << 8) | (low as u16);
 
     addr
@@ -312,7 +312,7 @@ pub fn absolute(cpu: &mut CPU) -> u16{
 pub fn absolutex(cpu: &mut CPU) -> (u16, bool) {
     let lo = cpu.read(cpu.pc) as u16;
     let hi = cpu.read(cpu.pc + 1) as u16;
-    cpu.pc += 2;
+    cpu.pc = cpu.pc.wrapping_add(2);
     let base: u16 = (hi << 8) | lo;
 
     let addr: u16 = base.wrapping_add(cpu.x as u16);
@@ -325,7 +325,7 @@ pub fn absolutex(cpu: &mut CPU) -> (u16, bool) {
 pub fn absolutey(cpu: &mut CPU) -> (u16, bool) {
     let lo = cpu.read(cpu.pc) as u16;
     let hi = cpu.read(cpu.pc + 1) as u16;
-    cpu.pc += 2;
+    cpu.pc = cpu.pc.wrapping_add(2);
     let base: u16 = (hi << 8) | lo;
 
     let addr: u16 = base.wrapping_add(cpu.y as u16);
@@ -337,7 +337,7 @@ pub fn absolutey(cpu: &mut CPU) -> (u16, bool) {
 
 pub fn indirectx(cpu: &mut CPU) -> u16 {
     let byte: u8 = cpu.read(cpu.pc);
-    cpu.pc += 1;
+    cpu.pc = cpu.pc.wrapping_add(1);
 
     let zp_addr = byte.wrapping_add(cpu.x);
 
@@ -351,7 +351,7 @@ pub fn indirectx(cpu: &mut CPU) -> u16 {
 
 pub fn indirecty(cpu: &mut CPU) -> (u16, bool) {
     let byte = cpu.read(cpu.pc);
-    cpu.pc += 1;
+    cpu.pc = cpu.pc.wrapping_add(1);
 
     let lo = cpu.read(byte as u16);
     let hi = cpu.read(byte.wrapping_add(1) as u16);
@@ -367,7 +367,7 @@ pub fn indirecty(cpu: &mut CPU) -> (u16, bool) {
 
 pub fn relative(cpu: &mut CPU) -> (u16, bool) {
     let byte: u8 = cpu.read(cpu.pc);
-    cpu.pc += 1;
+    cpu.pc = cpu.pc.wrapping_add(1);
 
     let signed = byte as i8;
 

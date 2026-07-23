@@ -10,9 +10,36 @@ pub enum Flag {
     Overflow,
     Negative
 }
+
+pub trait Bus {
+    fn read(&self, address: u16) -> u8;
+    fn write(&mut self, address: u16, data: u8);
+}
+
+pub struct FlatBus {
+    memory: [u8; 65536],
+}
+
+impl FlatBus {
+    pub fn new() -> Self {
+        Self { memory: [0; 65536] }
+    }
+}
+
+impl Bus for FlatBus {
+    fn read(&self, address: u16) -> u8 {
+        self.memory[address as usize]
+    }
+
+    fn write(&mut self, address: u16, data: u8) {
+        self.memory[address as usize] = data;
+    }
+}
+
 pub struct CPU {
 
-    memory: [u8; 65536],
+    //memory: [u8; 65536],
+    bus: Box<dyn Bus>,
     /*
     memory map
     0x0000 - 0x07FF 2kb of internal cpu ram
@@ -45,9 +72,9 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new() -> Self {
+    pub fn new(bus: Box<dyn Bus>) -> Self {
             Self {
-                memory: [0; 65536],
+                bus,
                 a: 0,
                 x: 0, // for addressing modes
                 y: 0, // for addressing modes
@@ -62,25 +89,12 @@ impl CPU {
             
     }
 
-    pub fn read(&self, address : u16) -> u8 {
-        if address <= 0x1FFF {
-            self.memory[(address & 0x07FF) as usize]
-        } else if address >= 0x2000 && address <= 0x3FFF {
-            self.memory[(0x2000 + (address & 0x0007)) as usize]
-        } else {
-            self.memory[address as usize]
-        }
+    pub fn read(&self, address: u16) -> u8 {
+        self.bus.read(address)
     }
 
-    pub fn write(&mut self, address : u16, data : u8) {
-        if address <= 0x1FFF {
-        self.memory[(address & 0x07FF) as usize] = data;
-
-        } else if address >= 0x2000 && address <= 0x3FFF {
-            self.memory[(0x2000 + (address & 0x0007)) as usize] = data;
-        }
-
-        else {self.memory[address as usize] = data;}
+    pub fn write(&mut self, address: u16, data: u8) {
+        self.bus.write(address, data)
     }
 
     pub fn reset(&mut self){

@@ -3,4 +3,6 @@ name = "oolio151-nes"
 version = "26.0.0"
 edition = "2024"
 
-[dependencies]
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

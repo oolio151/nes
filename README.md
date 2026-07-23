@@ -11,3 +11,6 @@ making an emulator for the nintendo entertainment system
     <li>APU</li>
     <li> unofficial opcodes </li>
 </ul>
+
+
+#### tests are from https://github.com/SingleStepTests/65x02
