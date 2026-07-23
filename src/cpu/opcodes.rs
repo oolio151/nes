@@ -11,6 +11,7 @@ use crate::cpu::ops::compare::*;
 use crate::cpu::ops::access::*;
 use crate::cpu::ops::other::*;
 use crate::cpu::ops::stack::*;
+use crate::cpu::ops::transfer::*;
 
 use super::CPU;
 
@@ -212,6 +213,54 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         0x76 => (ror_zeropagex, 6),
         0x6E => (ror_absolute, 6),
         0x7E => (ror_absolutex, 7),
+
+        // return from interrupt
+        0x40 => (rti, 6),
+
+        // return from subroutine
+        0x60 => (rts, 6),
+
+        // subtract with carry
+        0xE9 => (sbc_immediate, 2),
+        0xE5 => (sbc_zeropage, 3),
+        0xF5 => (sbc_zeropagex, 4),
+        0xED => (sbc_absolute, 4),
+        0xFD => (sbc_absolutex, 4),
+        0xF9 => (sbc_absolutey, 4),
+        0xE1 => (sbc_indirectx, 6),
+        0xF1 => (sbc_indirecty, 5),
+
+        // set carry, interrupt disable, and negative flags
+        0x38 => (sec, 2),
+        0xF8 => (sed, 2),
+        0x78 => (sei, 2),
+
+        // store a
+        0x85 => (sta_zeropage, 3),
+        0x95 => (sta_zeropagex, 4),
+        0x8D => (sta_absolute, 4),
+        0x9D => (sta_absolutex, 5),
+        0x99 => (sta_absolutey, 5),
+        0x81 => (sta_indirectx, 6),
+        0x91 => (sta_indirecty, 6),
+
+        // store x
+        0x86 => (stx_zeropage, 3),
+        0x96 => (stx_zeropagey, 4),
+        0x8E => (stx_absolute, 4),
+
+        // store y
+        0x84 => (sty_zeropage, 3),
+        0x94 => (sty_zeropagex, 4),
+        0x8C => (sty_absolute, 4),
+
+        // transferring things between registers
+        0xAA => (tax, 2),
+        0xA8 => (tay, 2),
+        0x8A => (txa, 2),
+        0x98 => (tya, 2),
+        0xBA => (tsx, 2),
+        0x9A => (txs, 2),
 
         _ => panic!("unknown opcode: {:02X}", opcode)
     }

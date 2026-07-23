@@ -183,3 +183,94 @@ pub fn ldy_absolutex(cpu: &mut CPU) -> u8 {
     
     if page_crossed { 1 } else { 0 }
 }
+
+pub fn sta_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    cpu.write(addr, cpu.a);
+
+    0
+}
+
+pub fn sta_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagex(cpu);
+    cpu.write(addr, cpu.a);
+
+    0
+}
+
+pub fn sta_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    cpu.write(addr, cpu.a);
+
+    0
+}
+
+pub fn sta_absolutex(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutex(cpu);
+    cpu.write(addr, cpu.a);
+
+    0
+}
+
+pub fn sta_absolutey(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutey(cpu);
+    cpu.write(addr, cpu.a);
+
+    0
+}
+
+pub fn sta_indirectx(cpu: &mut CPU) -> u8 {
+    let addr = indirectx(cpu);
+    cpu.write(addr, cpu.a);
+
+    0
+}
+
+pub fn sta_indirecty(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = indirecty(cpu);
+    cpu.write(addr, cpu.a);
+
+    0
+}
+
+pub fn stx_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    cpu.write(addr, cpu.x);
+
+    0
+}
+
+pub fn stx_zeropagey(cpu: &mut CPU) -> u8 {
+    let addr = zeropagey(cpu);
+    cpu.write(addr, cpu.x);
+
+    0
+}
+
+pub fn stx_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    cpu.write(addr, cpu.x);
+
+    0
+}
+
+pub fn sty_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    cpu.write(addr, cpu.y);
+
+    0
+}
+
+pub fn sty_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagey(cpu);
+    cpu.write(addr, cpu.y);
+
+    0
+}
+
+pub fn sty_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    cpu.write(addr, cpu.y);
+
+    0
+}

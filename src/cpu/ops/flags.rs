@@ -25,3 +25,21 @@ pub fn clv(cpu: &mut CPU) -> u8 {
 
     0
 }
+
+pub fn sec(cpu: &mut CPU) -> u8 {
+    cpu.set_flag(Flag::Carry, true);
+
+    0
+}
+
+pub fn sed(cpu: &mut CPU) -> u8 {
+    cpu.set_flag(Flag::Decimal, true);
+
+    0
+}
+
+pub fn sei(cpu: &mut CPU) -> u8 {
+    cpu.set_flag(Flag::InterruptDisable, true);
+
+    0
+}

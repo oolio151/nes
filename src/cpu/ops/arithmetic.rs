@@ -227,3 +227,60 @@ pub fn dey(cpu: &mut CPU) -> u8 {
 
         0
     }
+
+fn sbc(cpu: &mut CPU, value: u8) {
+    adc(cpu, !value);
+}
+
+pub fn sbc_immediate(cpu: &mut CPU) -> u8 {
+    let value = immediate(cpu);
+    sbc(cpu, value);
+
+    0
+}
+
+pub fn sbc_zeropage(cpu: &mut CPU) -> u8 {
+    let value = zeropage(cpu);
+    sbc(cpu, cpu.read(value));
+
+    0
+}
+
+pub fn sbc_zeropagex(cpu: &mut CPU) -> u8 {
+    let value = zeropagex(cpu);
+    sbc(cpu, cpu.read(value));
+    0
+}
+
+pub fn sbc_absolute(cpu: &mut CPU) -> u8 {
+    let value = absolute(cpu);
+    sbc(cpu, cpu.read(value));
+    0
+}
+
+pub fn sbc_absolutex(cpu: &mut CPU) -> u8 {
+    let value = absolutex(cpu);
+    sbc(cpu, cpu.read(value.0));
+
+     if value.1 {1} else {0}
+}
+
+pub fn sbc_absolutey(cpu: &mut CPU) -> u8 {
+    let value = absolutey(cpu);
+    sbc(cpu, cpu.read(value.0));
+
+     if value.1 {1} else {0}
+}
+
+pub fn sbc_indirectx(cpu: &mut CPU) -> u8 {
+    let value = indirectx(cpu);
+    sbc(cpu, cpu.read(value));
+    0
+}
+
+pub fn sbc_indirecty(cpu: &mut CPU) -> u8 {
+    let value = indirecty(cpu);
+    sbc(cpu, cpu.read(value.0));
+
+     if value.1 {1} else {0}
+}

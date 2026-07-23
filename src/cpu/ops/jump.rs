@@ -62,3 +62,31 @@ pub fn jsr(cpu: &mut CPU) -> u8 {
     cpu.pc = target;
     0
 }
+
+pub fn rti(cpu: &mut CPU) -> u8 {
+    cpu.s = cpu.s.wrapping_add(1);
+    cpu.p = (cpu.read(0x0100 + cpu.s as u16) & 0b1110_1111) | 0b0010_0000;
+
+    cpu.s = cpu.s.wrapping_add(1);
+    let lo = cpu.read(0x0100 + cpu.s as u16) as u16;
+
+    cpu.s = cpu.s.wrapping_add(1);
+    let hi = cpu.read(0x0100 + cpu.s as u16) as u16;
+
+    cpu.pc = (hi << 8) | lo;
+
+    0
+}
+
+pub fn rts(cpu: &mut CPU) -> u8 {
+    cpu.s = cpu.s.wrapping_add(1);
+    let lo = cpu.read(0x0100 + cpu.s as u16) as u16;
+
+    cpu.s = cpu.s.wrapping_add(1);
+    let hi = cpu.read(0x0100 + cpu.s as u16) as u16;
+
+    cpu.pc = (hi << 8) | lo;
+
+    0
+}
+
