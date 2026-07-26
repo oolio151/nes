@@ -1,4 +1,5 @@
 use crate::cpu::CPU;
+use crate::cpu::opcodes::{immediate, zeropage, zeropagex, absolute, absolutex};
 
 pub fn nop(_cpu: &mut CPU) -> u8 {
     // hes lonely :(, so i wrote some stuff below
@@ -25,4 +26,45 @@ pub fn nop(_cpu: &mut CPU) -> u8 {
         }
     */
     0
+}
+
+// START OF UNOFFICIAL OPCDES
+
+pub fn nop_implied(cpu: &mut CPU) -> u8 {
+    let _ = cpu;
+    0
+}
+
+pub fn nop_immediate(cpu: &mut CPU) -> u8 {
+    let _ = immediate(cpu);
+    0
+}
+
+pub fn nop_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    let _ = cpu.read(addr);
+    0
+}
+
+pub fn nop_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagex(cpu);
+    let _ = cpu.read(addr);
+    0
+}
+
+pub fn nop_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    let _ = cpu.read(addr);
+    0
+}
+
+pub fn nop_absolutex(cpu: &mut CPU) -> u8 {
+    let (addr, page_crossed) = absolutex(cpu);
+    let _ = cpu.read(addr);
+    if page_crossed { 1 } else { 0 }
+}
+
+pub fn jam(cpu: &mut CPU) -> u8 {
+    let _ = cpu;
+    panic!("CPU jammed");
 }

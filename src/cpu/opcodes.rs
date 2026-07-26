@@ -262,6 +262,151 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         0xBA => (tsx, 2),
         0x9A => (txs, 2),
 
+        // =========================================================
+        // START OF UNOFFICAL OPCODES, these are kinda vibecoded ngl
+        // =========================================================
+
+        // LAX
+        0xA7 => (lax_zeropage, 3),
+        0xB7 => (lax_zeropagey, 4),
+        0xAF => (lax_absolute, 4),
+        0xBF => (lax_absolutey, 4),
+        0xA3 => (lax_indirectx, 6),
+        0xB3 => (lax_indirecty, 5),
+
+        // SAX
+        0x87 => (sax_zeropage, 3),
+        0x97 => (sax_zeropagey, 4),
+        0x8F => (sax_absolute, 4),
+        0x83 => (sax_indirectx, 6),
+
+        // SHY / SHX / AHX / LAS / LXA
+        0x9C => (shy_absolutex, 5),
+        0x9E => (shx_absolutey, 5),
+        0x93 => (ahx_indirecty, 6),
+        0x9F => (ahx_absolutey, 5),
+        0xBB => (las_absolutey, 4),
+        0xAB => (lxa_immediate, 2),
+
+        // RRA
+        0x67 => (rra_zeropage, 5),
+        0x77 => (rra_zeropagex, 6),
+        0x6F => (rra_absolute, 6),
+        0x7F => (rra_absolutex, 7),
+        0x7B => (rra_absolutey, 7),
+        0x63 => (rra_indirectx, 8),
+        0x73 => (rra_indirecty, 8),
+
+        // ISC
+        0xE7 => (isc_zeropage, 5),
+        0xF7 => (isc_zeropagex, 6),
+        0xEF => (isc_absolute, 6),
+        0xFF => (isc_absolutex, 7),
+        0xFB => (isc_absolutey, 7),
+        0xE3 => (isc_indirectx, 8),
+        0xF3 => (isc_indirecty, 8),
+
+        // ARR / SBX / SBC dup
+        0x6B => (arr_immediate, 2),
+        0xCB => (sbx_immediate, 2),
+        0xEB => (sbc_immediate_dup, 2),
+
+        0x0B => (anc_immediate, 2),
+        0x2B => (anc_immediate_dup, 2),
+        0x4B => (alr_immediate, 2),
+        0x8B => (xaa_immediate, 2),
+
+        0xC7 => (dcp_zeropage, 5),
+        0xD7 => (dcp_zeropagex, 6),
+        0xCF => (dcp_absolute, 6),
+        0xDF => (dcp_absolutex, 7),
+        0xDB => (dcp_absolutey, 7),
+        0xC3 => (dcp_indirectx, 8),
+        0xD3 => (dcp_indirecty, 8),
+
+        // SLO
+        0x07 => (slo_zeropage, 5),
+        0x17 => (slo_zeropagex, 6),
+        0x0F => (slo_absolute, 6),
+        0x1F => (slo_absolutex, 7),
+        0x1B => (slo_absolutey, 7),
+        0x03 => (slo_indirectx, 8),
+        0x13 => (slo_indirecty, 8),
+
+        // RLA
+        0x27 => (rla_zeropage, 5),
+        0x37 => (rla_zeropagex, 6),
+        0x2F => (rla_absolute, 6),
+        0x3F => (rla_absolutex, 7),
+        0x3B => (rla_absolutey, 7),
+        0x23 => (rla_indirectx, 8),
+        0x33 => (rla_indirecty, 8),
+
+        // SRE
+        0x47 => (sre_zeropage, 5),
+        0x57 => (sre_zeropagex, 6),
+        0x4F => (sre_absolute, 6),
+        0x5F => (sre_absolutex, 7),
+        0x5B => (sre_absolutey, 7),
+        0x43 => (sre_indirectx, 8),
+        0x53 => (sre_indirecty, 8),
+
+        // Single-byte NOPs
+        0x1A => (nop_implied, 2),
+        0x3A => (nop_implied, 2),
+        0x5A => (nop_implied, 2),
+        0x7A => (nop_implied, 2),
+        0xDA => (nop_implied, 2),
+        0xFA => (nop_implied, 2),
+
+        // Immediate NOPs
+        0x80 => (nop_immediate, 2),
+        0x82 => (nop_immediate, 2),
+        0x89 => (nop_immediate, 2),
+        0xC2 => (nop_immediate, 2),
+        0xE2 => (nop_immediate, 2),
+
+        // Zero page NOPs
+        0x04 => (nop_zeropage, 3),
+        0x44 => (nop_zeropage, 3),
+        0x64 => (nop_zeropage, 3),
+
+        // Zero page,X NOPs
+        0x14 => (nop_zeropagex, 4),
+        0x34 => (nop_zeropagex, 4),
+        0x54 => (nop_zeropagex, 4),
+        0x74 => (nop_zeropagex, 4),
+        0xD4 => (nop_zeropagex, 4),
+        0xF4 => (nop_zeropagex, 4),
+
+        // Absolute NOP
+        0x0C => (nop_absolute, 4),
+
+        // Absolute,X NOPs
+        0x1C => (nop_absolutex, 4),
+        0x3C => (nop_absolutex, 4),
+        0x5C => (nop_absolutex, 4),
+        0x7C => (nop_absolutex, 4),
+        0xDC => (nop_absolutex, 4),
+        0xFC => (nop_absolutex, 4),
+
+        // JAM / KIL / HLT
+        0x02 => (jam, 0),
+        0x12 => (jam, 0),
+        0x22 => (jam, 0),
+        0x32 => (jam, 0),
+        0x42 => (jam, 0),
+        0x52 => (jam, 0),
+        0x62 => (jam, 0),
+        0x72 => (jam, 0),
+        0x92 => (jam, 0),
+        0xB2 => (jam, 0),
+        0xD2 => (jam, 0),
+        0xF2 => (jam, 0),
+
+        // TAS
+        0x9B => (tas_absolutey, 5),
+
         _ => panic!("unknown opcode: {:02X}", opcode)
     }
 }

@@ -1,6 +1,7 @@
 use crate::cpu::CPU;
 use crate::cpu::Flag;
 use crate::cpu::opcodes::{immediate, zeropage, zeropagex, absolute, absolutex, absolutey, indirectx, indirecty};
+use crate::cpu::ops::shift::ror;
 
 // add with carry
 fn adc(cpu: &mut CPU, value : u8) {
@@ -74,7 +75,7 @@ pub fn adc_indirecty(cpu: &mut CPU) -> u8 {
      if value.1 {1} else {0}
 }
 
-fn dec(cpu: &mut CPU, value: u8) -> u8 {
+pub(crate) fn dec(cpu: &mut CPU, value: u8) -> u8 {
     let result = value.wrapping_sub(1);
 
     cpu.set_flag(Flag::Zero, result == 0);
@@ -283,4 +284,147 @@ pub fn sbc_indirecty(cpu: &mut CPU) -> u8 {
     sbc(cpu, cpu.read(value.0));
 
      if value.1 {1} else {0}
+}
+
+// START OF UNOFFICAL OPCODES
+fn rra(cpu: &mut CPU, addr: u16) {
+    let value = cpu.read(addr);
+    let result = ror(cpu, value);
+    cpu.write(addr, result);
+
+    adc(cpu, result);
+}
+
+pub fn rra_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    rra(cpu, addr);
+    0
+}
+
+pub fn rra_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagex(cpu);
+    rra(cpu, addr);
+    0
+}
+
+pub fn rra_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    rra(cpu, addr);
+    0
+}
+
+pub fn rra_absolutex(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutex(cpu);
+    rra(cpu, addr);
+    0
+}
+
+pub fn rra_absolutey(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutey(cpu);
+    rra(cpu, addr);
+    0
+}
+
+pub fn rra_indirectx(cpu: &mut CPU) -> u8 {
+    let addr = indirectx(cpu);
+    rra(cpu, addr);
+    0
+}
+
+pub fn rra_indirecty(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = indirecty(cpu);
+    rra(cpu, addr);
+    0
+}
+
+fn isc(cpu: &mut CPU, addr: u16) {
+    let value = cpu.read(addr);
+    let result = inc(cpu, value);
+    cpu.write(addr, result);
+
+    sbc(cpu, result);
+}
+
+pub fn isc_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    isc(cpu, addr);
+    0
+}
+
+pub fn isc_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagex(cpu);
+    isc(cpu, addr);
+    0
+}
+
+pub fn isc_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    isc(cpu, addr);
+    0
+}
+
+pub fn isc_absolutex(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutex(cpu);
+    isc(cpu, addr);
+    0
+}
+
+pub fn isc_absolutey(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutey(cpu);
+    isc(cpu, addr);
+    0
+}
+
+pub fn isc_indirectx(cpu: &mut CPU) -> u8 {
+    let addr = indirectx(cpu);
+    isc(cpu, addr);
+    0
+}
+
+pub fn isc_indirecty(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = indirecty(cpu);
+    isc(cpu, addr);
+    0
+}
+
+pub fn arr_immediate(cpu: &mut CPU) -> u8 {
+    let value = immediate(cpu);
+    let anded = cpu.a & value;
+
+    let old_carry = cpu.get_flag(Flag::Carry);
+    let mut result = anded >> 1;
+    if old_carry {
+        result |= 0b1000_0000;
+    }
+
+    cpu.a = result;
+
+    cpu.set_flag(Flag::Zero, result == 0);
+    cpu.set_flag(Flag::Negative, result & 0x80 != 0);
+    cpu.set_flag(Flag::Carry, result & 0b0100_0000 != 0);
+    cpu.set_flag(
+        Flag::Overflow,
+        ((result & 0b0100_0000) >> 6) ^ ((result & 0b0010_0000) >> 5) != 0,
+    );
+
+    0
+}
+
+pub fn sbx_immediate(cpu: &mut CPU) -> u8 {
+    let value = immediate(cpu);
+    let anded = cpu.a & cpu.x;
+
+    cpu.set_flag(Flag::Carry, anded >= value);
+
+    let result = anded.wrapping_sub(value);
+    cpu.x = result;
+
+    cpu.set_flag(Flag::Zero, result == 0);
+    cpu.set_flag(Flag::Negative, result & 0x80 != 0);
+
+    0
+}
+
+pub fn sbc_immediate_dup(cpu: &mut CPU) -> u8 {
+    sbc_immediate(cpu)
 }

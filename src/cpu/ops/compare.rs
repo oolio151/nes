@@ -1,6 +1,8 @@
 use crate::cpu::CPU;
 use crate::cpu::Flag;
 use crate::cpu::opcodes::{immediate, zeropage, zeropagex, absolute, absolutex, absolutey, indirectx, indirecty};
+use crate::cpu::ops::arithmetic::dec;
+
 
 fn compare(cpu: &mut CPU, register: u8, value: u8) {
     let result = register.wrapping_sub(value);
@@ -118,5 +120,57 @@ pub fn cpy_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
     cpy(cpu, cpu.read(addr));
 
+    0
+}
+
+// START OF UNOFFICIAL OPCODES
+
+fn dcp(cpu: &mut CPU, addr: u16) {
+    let value = cpu.read(addr);
+    let result = dec(cpu, value);
+    cpu.write(addr, result);
+
+    cmp(cpu, result);
+}
+
+pub fn dcp_zeropage(cpu: &mut CPU) -> u8 {
+    let addr = zeropage(cpu);
+    dcp(cpu, addr);
+    0
+}
+
+pub fn dcp_zeropagex(cpu: &mut CPU) -> u8 {
+    let addr = zeropagex(cpu);
+    dcp(cpu, addr);
+    0
+}
+
+pub fn dcp_absolute(cpu: &mut CPU) -> u8 {
+    let addr = absolute(cpu);
+    dcp(cpu, addr);
+    0
+}
+
+pub fn dcp_absolutex(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutex(cpu);
+    dcp(cpu, addr);
+    0
+}
+
+pub fn dcp_absolutey(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = absolutey(cpu);
+    dcp(cpu, addr);
+    0
+}
+
+pub fn dcp_indirectx(cpu: &mut CPU) -> u8 {
+    let addr = indirectx(cpu);
+    dcp(cpu, addr);
+    0
+}
+
+pub fn dcp_indirecty(cpu: &mut CPU) -> u8 {
+    let (addr, _page_crossed) = indirecty(cpu);
+    dcp(cpu, addr);
     0
 }
