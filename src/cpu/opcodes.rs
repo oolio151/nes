@@ -311,7 +311,7 @@ pub fn absolute(cpu: &mut CPU) -> u16{
 
 pub fn absolutex(cpu: &mut CPU) -> (u16, bool) {
     let lo = cpu.read(cpu.pc) as u16;
-    let hi = cpu.read(cpu.pc + 1) as u16;
+    let hi = cpu.read(cpu.pc.wrapping_add(1)) as u16;
     cpu.pc = cpu.pc.wrapping_add(2);
     let base: u16 = (hi << 8) | lo;
 
@@ -324,7 +324,7 @@ pub fn absolutex(cpu: &mut CPU) -> (u16, bool) {
 
 pub fn absolutey(cpu: &mut CPU) -> (u16, bool) {
     let lo = cpu.read(cpu.pc) as u16;
-    let hi = cpu.read(cpu.pc + 1) as u16;
+    let hi = cpu.read(cpu.pc.wrapping_add(1)) as u16;
     cpu.pc = cpu.pc.wrapping_add(2);
     let base: u16 = (hi << 8) | lo;
 

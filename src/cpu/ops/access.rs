@@ -262,7 +262,7 @@ pub fn sty_zeropage(cpu: &mut CPU) -> u8 {
 }
 
 pub fn sty_zeropagex(cpu: &mut CPU) -> u8 {
-    let addr = zeropagey(cpu);
+    let addr = zeropagex(cpu);
     cpu.write(addr, cpu.y);
 
     0
