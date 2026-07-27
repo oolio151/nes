@@ -1,6 +1,8 @@
 pub mod opcodes;
 pub mod ops;
 
+use crate::ppu::PPU;
+
 pub enum Flag {
     Carry,
     Zero,
@@ -12,10 +14,12 @@ pub enum Flag {
 }
 
 pub trait Bus {
-    fn read(&self, address: u16) -> u8;
+    fn read(&mut self, address: u16) -> u8;
     fn write(&mut self, address: u16, data: u8);
 }
 
+
+// Flatbus is for the tests, since the tests dont work with the memory repetition
 pub struct FlatBus {
     memory: [u8; 65536],
 }
@@ -27,12 +31,55 @@ impl FlatBus {
 }
 
 impl Bus for FlatBus {
-    fn read(&self, address: u16) -> u8 {
+    fn read(&mut self, address: u16) -> u8 {
         self.memory[address as usize]
     }
 
     fn write(&mut self, address: u16, data: u8) {
         self.memory[address as usize] = data;
+    }
+}
+
+pub trait Mapper {
+    fn read(&self, address: u16) -> u8;
+    fn write(&mut self, address: u16, data: u8);
+}
+
+pub struct NesBus {
+    cpu_ram: [u8; 0x0800],
+    ppu: PPU,
+    apu_io: [u8; 24],
+    cartridge: Box<dyn Mapper>,
+}
+
+impl Bus for NesBus {
+    fn read(&mut self, address: u16) -> u8 {
+        match address {
+            0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize],
+            0x2000..=0x3FFF => self.ppu.read_register(address & 0x0007),
+            0x4000..=0x4017 => self.read_apu_io(address),
+            0x4018..=0x401F => 0,
+            0x4020..=0xFFFF => self.cartridge.read(address),
+        }
+    }
+
+    fn write(&mut self, address: u16, data: u8) {
+        match address {
+            0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize] = data,
+            0x2000..=0x3FFF => self.ppu.write_register(address & 0x0007, data),
+            0x4000..=0x4017 => self.write_apu_io(address, data),
+            0x4018..=0x401F => {},
+            0x4020..=0xFFFF => self.cartridge.write(address, data),
+        }
+    }
+}
+
+impl NesBus {
+    fn read_apu_io(&self, address: u16) -> u8 {
+        0
+    }
+
+    fn write_apu_io(&mut self, address: u16, data: u8) {
     }
 }
 
@@ -89,7 +136,7 @@ impl CPU {
             
     }
 
-    pub fn read(&self, address: u16) -> u8 {
+    pub fn read(&mut self, address: u16) -> u8 {
         self.bus.read(address)
     }
 

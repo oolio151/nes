@@ -65,6 +65,5 @@ pub fn nop_absolutex(cpu: &mut CPU) -> u8 {
 }
 
 pub fn jam(cpu: &mut CPU) -> u8 {
-    let _ = cpu;
-    panic!("CPU jammed");
+    0
 }

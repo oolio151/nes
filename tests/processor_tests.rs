@@ -26,6 +26,9 @@ const TEST_DIR: &str = "tests/nes6502/v1";
 // deliberate so testing "official only" doesn't get buried under a wall
 // of "unknown opcode" panics for instructions you haven't implemented
 // (and may never implement) on purpose.
+
+
+//const TEST_MODE: OpcodeSet = OpcodeSet::Official;
 const TEST_MODE: OpcodeSet = OpcodeSet::Unofficial;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

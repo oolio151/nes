@@ -1,15 +1,19 @@
-# nes
-making an emulator for the nintendo entertainment system
+# oolio151-nes
+An emulator of the Nintendo Entertainment System, built in Rust. Currently in Development.
 
 ### Development Steps
 <ul>
-    <li>CPU / official opcodes - in progress</li>
+    <li><s>CPU / official opcodes - in progress</li>
     <ul>
       <li>interrupts</li>
-    </ul>
+      <li> unofficial opcodes </s> (some bugs remain) <s> </li>
+    </ul></s>
+    <li><b>Bus and Mapper, Cartridge Loading << DOING</b></li>
     <li>PPU</li>
+    <li>Display</li>
+    <li>Input</li>
     <li>APU</li>
-    <li> unofficial opcodes </li>
+    
 </ul>
 
 

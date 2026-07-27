@@ -25,8 +25,8 @@ pub fn cmp_immediate(cpu: &mut CPU) -> u8 {
 
 pub fn cmp_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
-    cmp(cpu, cpu.read(addr));
-
+    let value = cpu.read(addr);
+    cmp(cpu, value);
     0
 }
 
