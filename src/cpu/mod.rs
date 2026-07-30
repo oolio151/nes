@@ -14,7 +14,7 @@ pub enum Flag {
 }
 
 pub trait Bus {
-    fn read(&mut self, address: u16) -> u8;
+    fn read(&self, address: u16) -> u8;
     fn write(&mut self, address: u16, data: u8);
 }
 
@@ -31,7 +31,7 @@ impl FlatBus {
 }
 
 impl Bus for FlatBus {
-    fn read(&mut self, address: u16) -> u8 {
+    fn read(&self, address: u16) -> u8 {
         self.memory[address as usize]
     }
 
@@ -53,7 +53,7 @@ pub struct NesBus {
 }
 
 impl Bus for NesBus {
-    fn read(&mut self, address: u16) -> u8 {
+    fn read(&self, address: u16) -> u8 {
         match address {
             0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize],
             0x2000..=0x3FFF => self.ppu.read_register(address & 0x0007),
@@ -136,7 +136,7 @@ impl CPU {
             
     }
 
-    pub fn read(&mut self, address: u16) -> u8 {
+    pub fn read(&self, address: u16) -> u8 {
         self.bus.read(address)
     }
 
