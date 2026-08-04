@@ -1,7 +1,9 @@
 pub mod opcodes;
 pub mod ops;
+pub mod mapper;
 
 use crate::ppu::PPU;
+use mapper::*;
 
 pub enum Flag {
     Carry,
@@ -19,7 +21,7 @@ pub trait Bus {
 }
 
 
-// Flatbus is for the tests, since the tests dont work with the memory repetition
+// Flatbus is for the tests, since the tests assume no memory mirroring
 pub struct FlatBus {
     memory: [u8; 65536],
 }
@@ -40,10 +42,6 @@ impl Bus for FlatBus {
     }
 }
 
-pub trait Mapper {
-    fn read(&self, address: u16) -> u8;
-    fn write(&mut self, address: u16, data: u8);
-}
 
 pub struct NesBus {
     cpu_ram: [u8; 0x0800],
