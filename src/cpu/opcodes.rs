@@ -69,7 +69,7 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         0x10 => (bpl, 2),
 
         // break (software iq) <- dunno what ts means
-        0x00 => (brk, 0),
+        0x00 => (brk, 7),
 
         // branch if carry clear
         0x50 => (bvc, 2),

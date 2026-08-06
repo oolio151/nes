@@ -73,6 +73,16 @@ impl Bus for NesBus {
 }
 
 impl NesBus {
+
+    pub fn new(cartridge: Box<dyn Mapper>) -> Self {
+        Self {
+            cpu_ram: [0; 0x0800],
+            ppu: PPU::new(),
+            apu_io: [0; 24],
+            cartridge,
+        }
+    }
+    
     fn read_apu_io(&self, address: u16) -> u8 {
         0
     }

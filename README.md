@@ -16,5 +16,5 @@ An emulator of the Nintendo Entertainment System, built in Rust. Currently in De
     
 </ul>
 
-
+#### only roms that use mapper 0 / NROM are supported rn, more to come
 #### tests are from https://github.com/SingleStepTests/65x02
