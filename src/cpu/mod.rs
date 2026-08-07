@@ -210,4 +210,34 @@ impl CPU {
         (self.p & mask) != 0
     }
 
+    // stack helpers, should prolly move these to the opcodes sometimes
+    pub fn push(&mut self, value: u8) {
+        self.write(0x0100 + self.s as u16, value);
+        self.s = self.s.wrapping_sub(1);
+    }
+
+    pub fn pull(&mut self) -> u8 {
+        self.s = self.s.wrapping_add(1);
+        self.read(0x0100 + self.s as u16)
+    }
+
+    fn interrupt(&mut self, vector_addr: u16, set_b: bool) {
+        let pc_high = (self.pc >> 8) as u8;
+        let pc_low = (self.pc & 0xFF) as u8;
+
+        self.push(pc_high);
+        self.push(pc_low);
+
+        let mut status = self.p | 0b0010_0000; // masking for safetry
+        if set_b {
+            status |= 0b0001_0000;
+        } else {
+            status &= !0b0001_0000;
+        }
+        self.push(status);
+
+        self.set_flag(Flag::InterruptDisable, true);
+        self.pc = (self.read(vector_addr) as u16) | ((self.read(vector_addr + 1) as u16) << 8);
+        }
+
 }
