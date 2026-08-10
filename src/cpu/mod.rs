@@ -2,7 +2,8 @@ pub mod opcodes;
 pub mod ops;
 pub mod mapper;
 
-use crate::ppu::PPU;
+use crate::ppu::{PPU};
+use crate::cartridge::Mirroring;
 use mapper::*;
 
 pub enum Flag {
@@ -45,7 +46,7 @@ impl Bus for FlatBus {
 
 pub struct NesBus {
     cpu_ram: [u8; 0x0800],
-    ppu: PPU,
+    pub ppu: PPU,
     apu_io: [u8; 24],
     cartridge: Box<dyn Mapper>,
 }
@@ -74,10 +75,10 @@ impl Bus for NesBus {
 
 impl NesBus {
 
-    pub fn new(cartridge: Box<dyn Mapper>) -> Self {
+    pub fn new(cartridge: Box<dyn Mapper>, mirroring: Mirroring, chr_rom: Vec<u8>) -> Self {
         Self {
             cpu_ram: [0; 0x0800],
-            ppu: PPU::new(),
+            ppu: PPU::new(mirroring, chr_rom),
             apu_io: [0; 24],
             cartridge,
         }

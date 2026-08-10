@@ -62,8 +62,16 @@ pub struct PPU {
 
     // THE OTHER CAVELIERS
     scanline: i16, // -1 indicates prerender, goes up to 260
+    /*
+    scanline ranges
+    -1       pre-render scanline
+    0-239    visible scanlines
+    240      post-render scanline, aka idle ppu
+    241-260  vblank scanlines
+    
+     */
     dot: u16, // 0 through 340
-    ood_frame: bool, // weird behavior shit
+    odd_frame: bool, // weird behavior shit
     nmi_pending: bool,
     vram: [u8; 2048],
     palette_ram: [u8; 32],
@@ -108,7 +116,7 @@ impl PPU {
 
             scanline: -1, // start on pre-render
             dot: 0,
-            ood_frame: false,
+            odd_frame: false,
 
             nmi_pending: false,
 
@@ -211,15 +219,91 @@ impl PPU {
             }
 
             PPURegister::PPUSTATUS => {
-                
+                self.io_latch.set(data);
             }
 
-            _ => {"fuck you";}
+            PPURegister::OAMADDR => {
+                self.oam_addr = data;
+                self.io_latch.set(data);
+            }
+
+            PPURegister::OAMDATA => {
+                self.oam[self.oam_addr as usize] = data;
+                self.oam_addr = self.oam_addr.wrapping_add(1);
+                self.io_latch.set(data);
+            }
+
+            PPURegister::PPUSCROLL => {
+                if !self.w.get() {
+                    self.x = data & 0x07;
+                    self.t = (self.t & 0b1111_1111_1110_0000) | ((data as u16) >> 3);
+                    self.w.set(true);
+                } else {
+                    let coarse_y = (data as u16 >> 3) & 0x1F;
+                    let fine_y = (data as u16 & 0x07) << 12;
+                    self.t = (self.t & 0b0000_1100_0001_1111) | (coarse_y << 5) | fine_y;
+                    self.w.set(false);
+                }
+
+                self.io_latch.set(data);
+            }
+
+            PPURegister::PPUADDR => {
+                if !self.w.get() {
+                    self.t = (self.t & 0x00FF) | (((data as u16) & 0x3F) << 8);
+                    self.w.set(true);
+                } else {
+                    self.t = (self.t & 0xFF00) | (data as u16);
+                    self.v.set(self.t);
+                    self.w.set(false);
+                }
+
+                self.io_latch.set(data);
+            }
+
+            PPURegister::PPUDATA => {
+                self.write_vram(self.v.get(), data);
+                self.v.set(self.v.get().wrapping_add(self.vram_addr_inc as u16));
+
+                self.io_latch.set(data);
+            }
         }
     }
 
     pub fn tick(&mut self) {
+        if self.scanline == 241 && self.dot == 1 {
+            self.vblank_flag.set(true);
+            self.nmi_pending = self.nmi_enable;
+        }
 
+        if self.scanline == -1 && self.dot == 1 {
+            self.vblank_flag.set(false);
+            self.sprite0_hit.set(false);
+            self.sprite_overflow.set(false);
+        }
+
+        if self.odd_frame && self.scanline == -1 && self.dot == 339 {
+            self.dot = 0;
+            self.scanline = 0;
+            self.odd_frame = false;
+            return;
+        }
+
+        self.dot += 1;
+        if self.dot > 340 {
+            self.dot = 0;
+            self.scanline += 1;
+            if self.scanline > 260 {
+                self.scanline = -1;
+                self.odd_frame = !self.odd_frame;
+            }
+        }
+    }
+
+    pub fn take_nmi(&mut self) -> bool {
+        let pending = self.nmi_pending;
+        self.nmi_pending = false;
+        pending
     }
 
     fn read_vram(&self, addr: u16) -> u8 {
