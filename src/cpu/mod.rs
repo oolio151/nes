@@ -54,7 +54,7 @@ impl Bus for NesBus {
     fn read(&self, address: u16) -> u8 {
         match address {
             0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize],
-            0x2000..=0x3FFF => self.ppu.read_register(address & 0x0007),
+            0x2000..=0x3FFF => self.ppu.read_register((address & 0x0007) as u8),
             0x4000..=0x4017 => self.read_apu_io(address),
             0x4018..=0x401F => 0,
             0x4020..=0xFFFF => self.cartridge.read(address),
@@ -64,7 +64,7 @@ impl Bus for NesBus {
     fn write(&mut self, address: u16, data: u8) {
         match address {
             0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize] = data,
-            0x2000..=0x3FFF => self.ppu.write_register(address & 0x0007, data),
+            0x2000..=0x3FFF => self.ppu.write_register((address & 0x0007) as u8, data),
             0x4000..=0x4017 => self.write_apu_io(address, data),
             0x4018..=0x401F => {},
             0x4020..=0xFFFF => self.cartridge.write(address, data),
@@ -82,7 +82,7 @@ impl NesBus {
             cartridge,
         }
     }
-    
+
     fn read_apu_io(&self, address: u16) -> u8 {
         0
     }

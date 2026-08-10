@@ -1,4 +1,5 @@
 use std::cell::Cell;
+use crate::{cartridge::Mirroring, ppu::PPURegister::{PPUCTRL, PPUSTATUS}};
 
 // ntsc because pal is for chuds
 // https://www.nesdev.org/wiki/PPU_programmer_reference
@@ -48,7 +49,7 @@ pub struct PPU {
     oam: [u8; 256],
 
     // INTERNAL REGISTERS
-    v: u16, // used for scroll pos while rendering, otherwise is current vram address, aka PPUADDR
+    v: Cell<u16>, // used for scroll pos while rendering, otherwise is current vram address, aka PPUADDR
     t: u16, // used for coarse-x scroll for next scanline and start y for screen, otherwise holds scroll or vram address before transferring to v
     x: u8, // fine-x pos of the current scroll, used for rendering stuff
     w: Cell<bool>, // toggles on write to PPUSCROLL || PPUADDR, indicating whether this is first or second write. clears on read of PPUSTATUS
@@ -64,11 +65,15 @@ pub struct PPU {
     dot: u16, // 0 through 340
     ood_frame: bool, // weird behavior shit
     nmi_pending: bool,
+    vram: [u8; 2048],
+    palette_ram: [u8; 32],
+    mirroring: Mirroring,
+    chr_rom: Vec<u8>,
 
 }
 
 impl PPU {
-    pub fn new() -> Self {
+    pub fn new(mirroring: Mirroring, chr_rom: Vec<u8>) -> Self {
         Self {
             nmi_enable: false,
             sprites_8x16: false,
@@ -92,7 +97,7 @@ impl PPU {
             oam_addr: 0,
             oam: [0; 256],
 
-            v: 0,
+            v: Cell::new(0),
             t: 0,
             x: 0,
             w: Cell::new(false),
@@ -106,6 +111,12 @@ impl PPU {
             ood_frame: false,
 
             nmi_pending: false,
+
+            vram: [0; 2048],
+            palette_ram: [0; 32],
+            mirroring, 
+            chr_rom,
+            
         }
     }
     
@@ -151,17 +162,14 @@ impl PPU {
             PPURegister::PPUDATA => {
                 let ret;
 
-                if self.v & 0x3F00 == 0x3F00 {
-                    ret = self.read_vram(self.v);
-
-                    self.read_buffer.set(self.read_vram(self.v.wrapping_sub(0x1000)));
+                if self.v.get() & 0x3F00 == 0x3F00 {
+                    ret = self.read_vram(self.v.get());
+                    self.read_buffer.set(self.read_vram(self.v.get().wrapping_sub(0x1000)));
                 } else {
-
                     ret = self.read_buffer.get();
-                    self.read_buffer.set(self.read_vram(self.v));
+                    self.read_buffer.set(self.read_vram(self.v.get()));
                 }
-
-                self.v = self.v.wrapping_add(self.vram_addr_inc as u16);
+                self.v.set(self.v.get().wrapping_add(self.vram_addr_inc as u16));
 
                 ret
             }
@@ -175,9 +183,83 @@ impl PPU {
     }
 
     pub fn write_register(&mut self, reg: u8, data: u8) {
+        let r = Self::index_to_register(reg);
+
+        match r {
+            PPURegister::PPUCTRL => {
+                self.nmi_enable = data & 0b1000_0000 != 0;
+                self.sprites_8x16 = data & 0b0010_0000 != 0;
+                self.bg_pattern_table_addr = if data & 0b0001_0000 != 0 { 0x1000 } else { 0x0000 };
+                self.sprite_pattern_table_addr = if data & 0b0000_1000 != 0 { 0x1000 } else { 0x0000 };
+                self.vram_addr_inc = if data & 0b0000_0100 != 0 { 32 } else { 1 };
+                self.t = (self.t & 0b0111_0011_1111_1111) | (((data as u16) & 0b0000_0011) << 10);
+
+                self.io_latch.set(data);
+            }
+
+            PPURegister::PPUMASK => {
+                self.grayscale = data & 0b0000_0001 != 0;
+                self.show_bg_in_leftmost = data & 0b0000_0010 != 0;
+                self.show_sprites_in_leftmost = data & 0b0000_0100 != 0;
+                self.bg_rendering = data & 0b0000_1000 != 0;
+                self.sprite_rendering = data & 0b0001_0000 != 0;
+                self.emphasize_red = data & 0b0010_0000 != 0;
+                self.emphasize_green = data & 0b0100_0000 != 0;
+                self.emphasize_blue = data & 0b1000_0000 != 0;
+
+                self.io_latch.set(data);
+            }
+
+            PPURegister::PPUSTATUS => {
+                
+            }
+
+            _ => {"fuck you";}
+        }
     }
 
     pub fn tick(&mut self) {
 
+    }
+
+    fn read_vram(&self, addr: u16) -> u8 {
+    let addr = addr & 0x3FFF; // PPU address space is 14-bit
+    match addr {
+            0x0000..=0x1FFF => self.chr_rom[addr as usize], 
+            0x2000..=0x3EFF => self.vram[self.mirror_nametable(addr)],
+            0x3F00..=0x3FFF => self.palette_ram[self.mirror_palette(addr)],
+            _ => unreachable!(),
+        }
+    }
+
+    fn write_vram(&mut self, addr: u16, data: u8) {
+        let addr = addr & 0x3FFF;
+        match addr {
+            0x0000..=0x1FFF => { /* used for chr ram, replace this once you go past nrom */ }
+            0x2000..=0x3EFF => self.vram[self.mirror_nametable(addr)] = data,
+            0x3F00..=0x3FFF => self.palette_ram[self.mirror_palette(addr)] = data,
+            _ => unreachable!(),
+        }
+    }
+
+    fn mirror_nametable(&self, addr: u16) -> usize {
+        let addr = (addr - 0x2000) % 0x1000;
+        let table = addr / 0x0400;
+        let offset = addr % 0x0400;
+
+        let physical_table = match self.mirroring {
+            Mirroring::Horizontal => table / 2,
+            Mirroring::Vertical   => table % 2, 
+        };
+
+        (physical_table as usize * 0x0400) + offset as usize
+    }   
+
+    fn mirror_palette(&self, addr: u16) -> usize {
+        let mut index = (addr - 0x3F00) % 0x20;
+        if index >= 0x10 && index % 4 == 0 {
+            index -= 0x10;
+        }
+        index as usize
     }
 }
