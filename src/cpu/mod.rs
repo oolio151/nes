@@ -19,6 +19,7 @@ pub enum Flag {
 pub trait Bus {
     fn read(&self, address: u16) -> u8;
     fn write(&mut self, address: u16, data: u8);
+    fn tick_ppu(&mut self) -> bool;
 }
 
 
@@ -40,6 +41,10 @@ impl Bus for FlatBus {
 
     fn write(&mut self, address: u16, data: u8) {
         self.memory[address as usize] = data;
+    }
+
+    fn tick_ppu(&mut self) -> bool { 
+        false 
     }
 }
 
@@ -70,6 +75,11 @@ impl Bus for NesBus {
             0x4018..=0x401F => {},
             0x4020..=0xFFFF => self.cartridge.write(address, data),
         }
+    }
+
+    fn tick_ppu(&mut self) -> bool {
+        self.ppu.tick();
+        self.ppu.take_nmi()
     }
 }
 
@@ -239,6 +249,14 @@ impl CPU {
 
         self.set_flag(Flag::InterruptDisable, true);
         self.pc = (self.read(vector_addr) as u16) | ((self.read(vector_addr + 1) as u16) << 8);
-        }
+    }
+
+    pub fn nmi(&mut self) {
+        self.interrupt(0xFFFA, false);
+    }
+
+    pub fn tick_ppu(&mut self) -> bool {
+        self.bus.tick_ppu()
+    }
 
 }

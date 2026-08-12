@@ -53,27 +53,39 @@ pub fn parse_header(bytes: &[u8]) -> Result<iNESHeader, String> {
     })
 }
 
-pub fn load_rom(bytes: &[u8]) -> Result<Box<dyn Mapper>, String> {
+pub struct LoadedRom {
+    pub mapper: Box<dyn Mapper>,
+    pub mirroring: Mirroring,
+    pub chr_rom: Vec<u8>,
+}
+
+pub fn load_rom(bytes: &[u8]) ->  Result<LoadedRom, String> {
     let header = parse_header(bytes)?;
     let prg_start = 16 + if header.has_trainer { 512 } else { 0 };
     let prg_end = prg_start + header.prg_rom_size;
     let chr_end = prg_end + header.chr_rom_size;
 
     if bytes.len() < chr_end {
-        return Err(format!("file too short",));
+        return Err("file too short".to_string());
     }
 
     let prg_rom = bytes[prg_start..prg_end].to_vec();
     let chr_rom = bytes[prg_end..chr_end].to_vec();
 
-    match header.mapper_number {
-        0 => Ok(Box::new(Nrom::new(prg_rom, chr_rom))),
-        n => Err(format!("mapper {} not yet implemented", n)),
-    }
+    let mapper: Box<dyn Mapper> = match header.mapper_number {
+        0 => Box::new(Nrom::new(prg_rom, chr_rom.clone())),
+        n => return Err(format!("mapper {} not yet implemented", n)),
+    };
+
+    Ok(LoadedRom {
+        mapper,
+        mirroring: header.mirroring,
+        chr_rom,
+    })
 }
 
 // this actually grabs from the file
-pub fn load_rom_from_file(path: &str) -> Result<Box<dyn Mapper>, String> {
+pub fn load_rom_from_file(path: &str) -> Result<LoadedRom, String> {
     let bytes = fs::read(path)
         .map_err(|e| format!("failed to read {}: {}", path, e))?;
 

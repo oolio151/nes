@@ -1,5 +1,7 @@
 use std::cell::Cell;
-use crate::{cartridge::Mirroring, ppu::PPURegister::{PPUCTRL, PPUSTATUS}};
+use crate::cartridge::Mirroring;
+
+pub mod palette;
 
 // ntsc because pal is for chuds
 // https://www.nesdev.org/wiki/PPU_programmer_reference
