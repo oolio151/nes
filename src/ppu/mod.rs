@@ -82,6 +82,31 @@ pub struct PPU {
     mirroring: Mirroring,
     chr_rom: Vec<u8>,
 
+    // background pipeline shit
+    bg_shift_lo: u16,
+    bg_shift_hi: u16,
+    attr_shift_lo: u8,
+    attr_shift_hi: u8,
+    attr_latch_lo: bool,
+    attr_latch_hi: bool,
+
+    // fetch staging latches (for cycles 1-256)
+    nt_latch: u8,
+    at_latch: u8,
+    bg_lo_latch: u8,
+    bg_hi_latch: u8,
+
+    // sprite output units (for cycles 257-320)
+    sprite_pattern_lo: [u8; 8],
+    sprite_pattern_hi: [u8; 8],
+    sprite_attr: [u8; 8],
+    sprite_x: [u8; 8],
+    sprite_zero_next: bool,
+    sprite_zero_current: bool,
+
+    // take a guess what this is genius, 256 by 240
+    framebuffer: [(u8, u8, u8); 61440],
+
 }
 
 impl PPU {
@@ -129,6 +154,27 @@ impl PPU {
             palette_ram: [0; 32],
             mirroring, 
             chr_rom,
+
+            bg_shift_lo: 0,
+            bg_shift_hi: 0,
+            attr_shift_lo: 0,
+            attr_shift_hi: 0,
+            attr_latch_lo: false,
+            attr_latch_hi: false,
+
+            nt_latch: 0,
+            at_latch: 0,
+            bg_lo_latch: 0,
+            bg_hi_latch: 0,
+
+            sprite_pattern_lo: [0; 8],
+            sprite_pattern_hi: [0; 8],
+            sprite_attr: [0; 8],
+            sprite_x: [0; 8],
+            sprite_zero_next: false,
+            sprite_zero_current: false,
+
+            framebuffer: [(0, 0, 0); 61440],
             
         }
     }
