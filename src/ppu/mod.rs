@@ -1,8 +1,10 @@
 use std::cell::Cell;
 use crate::cartridge::Mirroring;
 use palette::NES_PALETTE;
+use rendering::*;
 
 pub mod palette;
+pub mod rendering;
 
 // ntsc because pal is for chuds
 // https://www.nesdev.org/wiki/PPU_programmer_reference
