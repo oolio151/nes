@@ -7,6 +7,7 @@ pub mod palette;
 pub mod rendering;
 pub mod bg_fetch;
 pub mod scroll;
+pub mod sprite;
 
 // ntsc because pal is for chuds
 // https://www.nesdev.org/wiki/PPU_programmer_reference
