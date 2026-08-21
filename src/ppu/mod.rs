@@ -1,13 +1,13 @@
 use std::cell::Cell;
 use crate::cartridge::Mirroring;
 use palette::NES_PALETTE;
-use rendering::*;
 
 pub mod palette;
 pub mod rendering;
 pub mod bg_fetch;
 pub mod scroll;
 pub mod sprite;
+pub mod oam;
 
 // ntsc because pal is for chuds
 // https://www.nesdev.org/wiki/PPU_programmer_reference
@@ -348,10 +348,13 @@ impl PPU {
         if self.scanline >= -1 && self.scanline <= 239 {
             if self.dot == 1 {
                 self.oam2 = [0xFF; 32];
+                self.sprite_zero_current = self.sprite_zero_next;
             }
             if self.dot == 65 {
                 self.evaluate_sprites();
             }
+
+            self.run_render_cycle();
         }
 
         self.dot += 1;
@@ -361,27 +364,6 @@ impl PPU {
             if self.scanline > 260 {
                 self.scanline = -1;
                 self.odd_frame = !self.odd_frame;
-            }
-        }
-    }
-
-    // for secondary oam (oam2), finds sprites taht are within the y range for the next scanline, and copies them to oam2
-    fn evaluate_sprites(&mut self) {
-        let sprite_height = if self.sprites_8x16 { 16 } else { 8 };
-        let target_scanline = self.scanline + 1;
-
-        let mut found = 0;
-        for i in 0..64 {
-            let y = self.oam[i * 4] as i16;
-            if target_scanline >= y && target_scanline < y + sprite_height {
-                if found < 8 {
-                    let base = found * 4;
-                    self.oam2[base..base + 4].copy_from_slice(&self.oam[i * 4..i * 4 + 4]);
-                } else {
-                    self.sprite_overflow.set(true);
-                    break;
-                }
-                found += 1;
             }
         }
     }
@@ -445,38 +427,5 @@ impl PPU {
         let hi = (plane1 >> bit) & 1;
 
         (hi << 1) | lo
-    }
-
-    fn background_pixel_color(&self) -> (u8, u8, u8) {
-        let v = self.v.get();
-
-        let tile_addr = 0x2000 | (v & 0x0FFF);
-        let tile_index = self.read_vram(tile_addr);
-
-        let attr_addr = 0x23C0
-            | (v & 0x0C00)
-            | ((v >> 4) & 0x38)
-            | ((v >> 2) & 0x07);
-        let attr_byte = self.read_vram(attr_addr);
-
-        let shift = ((v >> 4) & 0b100) | (v & 0b010);
-        let palette_select = (attr_byte >> shift) & 0b11;
-
-        let fine_y = ((v >> 12) & 0x07) as u8;
-        let col = self.x;
-
-        let pattern_value = self.tile_pixel(
-            self.bg_pattern_table_addr,
-            tile_index,
-            fine_y,
-            col,
-        );
-
-        let palette_addr = 0x3F00
-            | ((palette_select as u16) << 2)
-            | (pattern_value as u16);
-
-        let color_index = self.read_vram(palette_addr) & 0x3F;
-        NES_PALETTE[color_index as usize]
     }
 }

@@ -1,6 +1,5 @@
 use super::PPU;
 use super::palette::NES_PALETTE;
-use super::sprite::current_sprite_pixel; // will add in sprite.rs
 
 impl PPU {
     // runs one per dot, pulling bg pixel shape and palette from shift register, eventually being written to framebuffer
@@ -18,10 +17,12 @@ impl PPU {
         let (sprite_pixel, sprite_palette, sprite_priority, sprite_is_zero) =
             self.current_sprite_pixel(dot);
 
+        let screen_x = (dot - 1) as u16;
         let (final_pixel, is_sprite, palette_select, hit) = self.priority_mux(
             bg_pixel, bg_palette,
             sprite_pixel, sprite_palette, sprite_priority, sprite_is_zero,
             self.bg_rendering, self.sprite_rendering,
+            screen_x,
         );
 
         if hit {
@@ -49,6 +50,7 @@ impl PPU {
         sprite_is_zero: bool,
         bg_enabled: bool,
         sprite_enabled: bool,
+        screen_x: u16,
     ) -> (u8, bool, u8, bool) {
         let bg_pixel = if bg_enabled { bg_pixel } else { 0 };
         let sprite_pixel = if sprite_enabled { sprite_pixel } else { 0 };
@@ -62,8 +64,21 @@ impl PPU {
             }
         };
 
-        let hit = bg_pixel != 0 && sprite_pixel != 0 && sprite_is_zero && bg_enabled && sprite_enabled;
+        let left_clip_active = screen_x < 8
+            && (!self.show_bg_in_leftmost || !self.show_sprites_in_leftmost);
+
+        let hit = bg_pixel != 0
+            && sprite_pixel != 0
+            && sprite_is_zero
+            && bg_enabled
+            && sprite_enabled
+            && screen_x != 255
+            && !left_clip_active;
 
         (final_pixel, is_sprite, palette_select, hit)
+    }
+
+    pub fn run_render_cycle(&mut self) {
+
     }
 }

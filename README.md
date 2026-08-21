@@ -8,8 +8,8 @@ An emulator of the Nintendo Entertainment System, built in Rust. Currently in De
       <li>interrupts</li>
       <li> unofficial opcodes </s> (some bugs remain) <s> </li>
     </ul></s>
-    <li><b>Bus and Mapper, Cartridge Loading << DOING</b></li>
-    <li>PPU</li>
+    <li>Bus and Mapper, Cartridge Loading</li>
+    <li><b>PPU << DOING</b></li>
     <li>Display</li>
     <li>Input</li>
     <li>APU</li>
