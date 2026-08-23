@@ -79,6 +79,75 @@ impl PPU {
     }
 
     pub fn run_render_cycle(&mut self) {
+        if !(self.bg_rendering || self.sprite_rendering) {
+            return;
+        }
 
+        let dot = self.dot;
+
+        // --- Cycle 0: idle ---
+        if dot == 0 {
+            return;
+        }
+
+        // background fetch, shift, output dots 1-256 and 321-336
+        if (dot >= 1 && dot <= 256) || (dot >= 321 && dot <= 336) {
+            self.bg_shift_lo <<= 1;
+            self.bg_shift_hi <<= 1;
+            self.attr_shift_lo = (self.attr_shift_lo << 1) | self.attr_latch_lo as u8;
+            self.attr_shift_hi = (self.attr_shift_hi << 1) | self.attr_latch_hi as u8;
+
+            if dot <= 256 && self.scanline >= 0 {
+                self.output_pixel(dot);
+            }
+
+            match (dot - 1) % 8 {
+                0 => {
+                    self.nt_latch = self.fetch_nametable_byte();
+                }
+                2 => {
+                    self.at_latch = self.fetch_attribute_byte();
+                }
+                4 => {
+                    self.bg_lo_latch = self.fetch_pattern_low();
+                }
+                6 => {
+                    self.bg_hi_latch = self.fetch_pattern_high();
+                }
+                7 => {
+                    self.bg_shift_lo = (self.bg_shift_lo & 0xFF00) | self.bg_lo_latch as u16;
+                    self.bg_shift_hi = (self.bg_shift_hi & 0xFF00) | self.bg_hi_latch as u16;
+
+                    let quadrant = self.attribute_quadrant_bits();
+                    self.attr_latch_lo = quadrant & 1 != 0;
+                    self.attr_latch_hi = quadrant & 2 != 0;
+
+                    self.increment_coarse_x();
+                }
+                _ => {}
+            }
+        }
+
+        // vertical scvroll increment on dot 256
+        if dot == 256 {
+            self.increment_vert_v();
+        }
+
+        // horizontal scroll reload on dot 257
+        if dot == 257 {
+            self.copy_horizontal_bits();
+        }
+
+        // sprite tile fetches for next scanline dots 257-320
+        if dot >= 257 && dot <= 320 {
+            self.sprite_fetch_cycle(dot);
+        }
+
+        // --- pre-render only, dots 280-304: vertical scroll reload ---
+        if self.scanline == -1 && dot >= 280 && dot <= 304 {
+            self.copy_vertical_bits();
+        }
+
+        // dots 337-340 are weird, not topuching thnat
     }
 }

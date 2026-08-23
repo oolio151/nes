@@ -53,7 +53,7 @@ impl PPU {
     }
 
     // on dots 257-320, dispatches sprite tile loading, one load per 8-dot window.
-    fn sprite_fetch_cycle(&mut self, dot: u16) {
+    pub fn sprite_fetch_cycle(&mut self, dot: u16) {
         let offset = dot - 257;
         let sprite_num = (offset / 8) as usize;
 

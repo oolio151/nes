@@ -375,13 +375,14 @@ impl PPU {
     }
 
     fn read_vram(&self, addr: u16) -> u8 {
-    let addr = addr & 0x3FFF; // PPU address space is 14-bit
-    match addr {
-            0x0000..=0x1FFF => self.chr_rom[addr as usize], 
-            0x2000..=0x3EFF => self.vram[self.mirror_nametable(addr)],
-            0x3F00..=0x3FFF => self.palette_ram[self.mirror_palette(addr)],
-            _ => unreachable!(),
-        }
+        let addr = addr & 0x3FFF; // PPU address space is 14-bit
+        self.notify_mapper(addr);
+        match addr {
+                0x0000..=0x1FFF => self.chr_rom[addr as usize], 
+                0x2000..=0x3EFF => self.vram[self.mirror_nametable(addr)],
+                0x3F00..=0x3FFF => self.palette_ram[self.mirror_palette(addr)],
+                _ => unreachable!(),
+            }
     }
 
     fn write_vram(&mut self, addr: u16, data: u8) {
@@ -427,5 +428,11 @@ impl PPU {
         let hi = (plane1 >> bit) & 1;
 
         (hi << 1) | lo
+    }
+
+    fn notify_mapper(&self, addr: u16) {
+        // will implement later when the mappers that use this are made
+        // TODO: wire this through to Mapper::notify_ppu_address once NesBus exposes a path for PPU -> Mapper communication.
+        let _ = addr;
     }
 }

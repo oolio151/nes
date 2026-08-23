@@ -1,8 +1,12 @@
 pub trait Mapper {
     fn read(&self, address: u16) -> u8;
     fn write(&mut self, address: u16, data: u8);
+
+    // used for certain mappers like mmc5 and 3
+    fn notify_ppu_address(&mut self, _address: u16) {}
 }
 
+#[allow(dead_code)]
 pub struct Nrom {
     prg_rom: Vec<u8>,
     chr_rom: Vec<u8>,
@@ -37,4 +41,7 @@ impl Mapper for Nrom {
             _ => {}
         }
     }
+
+
+    
 }

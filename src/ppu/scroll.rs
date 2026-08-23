@@ -2,7 +2,7 @@
 use super::PPU;
 
 impl PPU{
-    fn increment_coarse_x(&mut self) {
+    pub fn increment_coarse_x(&mut self) {
         let mut v = self.v.get();
         if v & 0x001F == 31 {
             v &= !0x001F;
@@ -13,7 +13,7 @@ impl PPU{
         self.v.set(v);
     }
 
-    fn increment_vert_v(&mut self) {
+    pub fn increment_vert_v(&mut self) {
         let mut v = self.v.get();
         if v & 0x7000 != 0x7000 {
             v += 0x1000;
@@ -33,13 +33,13 @@ impl PPU{
         self.v.set(v);
     }
 
-    fn copy_horizontal_bits(&mut self) {
+    pub fn copy_horizontal_bits(&mut self) {
         let v = self.v.get();
         let t = self.t;
         self.v.set((v & !0x041F) | (t & 0x041F));
     }
 
-    fn copy_vertical_bits(&mut self) {
+    pub fn copy_vertical_bits(&mut self) {
         let v = self.v.get();
         let t = self.t;
         self.v.set((v & !0x7BE0) | (t & 0x7BE0));
