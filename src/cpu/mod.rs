@@ -21,6 +21,7 @@ pub trait Bus {
     fn write(&mut self, address: u16, data: u8);
     fn tick_ppu(&mut self) -> bool;
     fn get_framebuffer(&self) -> &[(u8, u8, u8)];
+    fn take_dma_cycles(&mut self) -> u16;
 }
 
 
@@ -51,6 +52,10 @@ impl Bus for FlatBus {
     fn get_framebuffer(&self) -> &[(u8, u8, u8)] {
         &[]
     }
+
+    fn take_dma_cycles(&mut self) -> u16 {
+        0
+    }
 }
 
 
@@ -59,6 +64,7 @@ pub struct NesBus {
     pub ppu: PPU,
     apu_io: [u8; 24],
     cartridge: Box<dyn Mapper>,
+    dma_pending: Option<u8>,
 }
 
 impl Bus for NesBus {
@@ -76,6 +82,7 @@ impl Bus for NesBus {
         match address {
             0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize] = data,
             0x2000..=0x3FFF => self.ppu.write_register((address & 0x0007) as u8, data),
+            0x4014 => self.dma_pending = Some(data),
             0x4000..=0x4017 => self.write_apu_io(address, data),
             0x4018..=0x401F => {},
             0x4020..=0xFFFF => self.cartridge.write(address, data),
@@ -90,6 +97,20 @@ impl Bus for NesBus {
     fn get_framebuffer(&self) -> &[(u8, u8, u8)] {
         self.ppu.get_framebuffer()
     }
+
+    fn take_dma_cycles(&mut self) -> u16 {
+        let Some(page) = self.dma_pending.take() else {
+            return 0;
+        };
+
+        let base = (page as u16) << 8;
+        for i in 0..256u16 {
+            let byte = self.read(base + i);
+            self.ppu.write_register(4, byte); // OAMDATA
+        }
+
+        514 
+    }
 }
 
 impl NesBus {
@@ -100,6 +121,7 @@ impl NesBus {
             ppu: PPU::new(mirroring, chr_rom),
             apu_io: [0; 24],
             cartridge,
+            dma_pending: None, 
         }
     }
 
@@ -183,12 +205,13 @@ impl CPU {
         self.cycle_count = 0;
     }
 
-    pub fn tick(&mut self) -> u8 {
+    pub fn tick(&mut self) -> u16 {
         let opcode: u8 = self.read(self.pc);
         self.pc = self.pc.wrapping_add(1);
         let (instruction, base_cycles) = opcodes::decode(opcode);
         let extra_cycles = instruction(self);
-        let total_cycles = base_cycles + extra_cycles;
+        let dma_cycles = self.bus.take_dma_cycles();
+        let total_cycles = base_cycles as u16 + extra_cycles as u16 + dma_cycles;
         self.cycle_count += total_cycles as u64;
         
         total_cycles
