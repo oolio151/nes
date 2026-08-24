@@ -183,6 +183,10 @@ impl PPU {
             
         }
     }
+
+    pub fn get_framebuffer(&self) -> &[(u8, u8, u8); 61440] {
+        &self.framebuffer
+    }
     
     fn index_to_register(i: u8) -> PPURegister {
         match i & 0x07 {

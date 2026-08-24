@@ -20,6 +20,7 @@ pub trait Bus {
     fn read(&self, address: u16) -> u8;
     fn write(&mut self, address: u16, data: u8);
     fn tick_ppu(&mut self) -> bool;
+    fn get_framebuffer(&self) -> &[(u8, u8, u8)];
 }
 
 
@@ -45,6 +46,10 @@ impl Bus for FlatBus {
 
     fn tick_ppu(&mut self) -> bool { 
         false 
+    }
+
+    fn get_framebuffer(&self) -> &[(u8, u8, u8)] {
+        &[]
     }
 }
 
@@ -80,6 +85,10 @@ impl Bus for NesBus {
     fn tick_ppu(&mut self) -> bool {
         self.ppu.tick();
         self.ppu.take_nmi()
+    }
+
+    fn get_framebuffer(&self) -> &[(u8, u8, u8)] {
+        self.ppu.get_framebuffer()
     }
 }
 
@@ -257,6 +266,10 @@ impl CPU {
 
     pub fn tick_ppu(&mut self) -> bool {
         self.bus.tick_ppu()
+    }
+
+    pub fn framebuffer(&self) -> &[(u8, u8, u8)] {
+        self.bus.get_framebuffer()
     }
 
 }
