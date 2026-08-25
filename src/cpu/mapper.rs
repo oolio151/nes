@@ -45,3 +45,5 @@ impl Mapper for Nrom {
 
     
 }
+
+// for mmc3, remmeber to implement 2 dot bus timing 

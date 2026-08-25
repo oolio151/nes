@@ -11,6 +11,7 @@ pub mod oam;
 
 // ntsc because pal is for chuds
 // https://www.nesdev.org/wiki/PPU_programmer_reference
+// potentially implement shift register decay adn sprite overflow bug later
 pub enum PPURegister {
     PPUCTRL, // W
     PPUMASK, // W

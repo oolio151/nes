@@ -34,7 +34,7 @@ impl PPU {
         let color_index = self.read_vram(palette_addr) & 0x3F;
         let color = NES_PALETTE[color_index as usize];
 
-        let x = (dot - 1) as usize;
+        let x = (dot - 4) as usize;
         let y = self.scanline as usize;
         self.framebuffer[y * 256 + x] = color;
     }
@@ -85,7 +85,7 @@ impl PPU {
 
         let dot = self.dot;
 
-        // --- Cycle 0: idle ---
+        // idle on cycle 0
         if dot == 0 {
             return;
         }
@@ -97,7 +97,7 @@ impl PPU {
             self.attr_shift_lo = (self.attr_shift_lo << 1) | self.attr_latch_lo as u8;
             self.attr_shift_hi = (self.attr_shift_hi << 1) | self.attr_latch_hi as u8;
 
-            if dot <= 256 && self.scanline >= 0 {
+            if dot >= 4 && dot <= 259 && self.scanline >= 0 {
                 self.output_pixel(dot);
             }
 
