@@ -1,3 +1,81 @@
+use pixels::{Pixels, SurfaceTexture};
+use winit::application::ApplicationHandler;
+use winit::event::WindowEvent;
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+use winit::window::{Window, WindowId};
+use std::sync::Arc;
+
+use oolio151_nes::emulator::Emulator;
+
+const WIDTH: u32 = 256;
+const HEIGHT: u32 = 240;
+
+struct App {
+    window: Option<Arc<Window>>,
+    pixels: Option<Pixels<'static>>,
+    emu: Emulator,
+}
+
+impl App {
+    fn new(emu: Emulator) -> Self {
+        Self { window: None, pixels: None, emu }
+    }
+}
+
+impl ApplicationHandler for App {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        let window = event_loop
+            .create_window(Window::default_attributes().with_title("NES"))
+            .unwrap();
+        let window = Arc::new(window);
+
+        let size = window.inner_size();
+        let surface_texture = SurfaceTexture::new(size.width, size.height, window.clone());
+        let pixels = Pixels::new(WIDTH, HEIGHT, surface_texture).unwrap();
+
+        self.window = Some(window);
+        self.pixels = Some(pixels);
+    }
+
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
+        match event {
+            WindowEvent::CloseRequested => {
+                event_loop.exit();
+            }
+            WindowEvent::RedrawRequested => {
+                self.emu.run_one_frame();
+
+                if let Some(pixels) = &mut self.pixels {
+                    let fb = self.emu.cpu.framebuffer();
+                    let frame = pixels.frame_mut();
+                    for (dst, &(r, g, b)) in frame.chunks_exact_mut(4).zip(fb.iter()) {
+                        dst[0] = r;
+                        dst[1] = g;
+                        dst[2] = b;
+                        dst[3] = 255;
+                    }
+                    if let Err(e) = pixels.render() {
+                        eprintln!("pixels.render() failed: {e}");
+                        event_loop.exit();
+                        return;
+                    }
+                }
+                if let Some(window) = &self.window {
+                    window.request_redraw();
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 fn main() {
-    println!("Hello, world!");
+    let rom_path = std::env::args().nth(1).expect("usage: nes <rom_path>");
+    let emu = Emulator::from_file(&rom_path).expect("failed to load ROM");
+
+    let event_loop = EventLoop::new().unwrap();
+    event_loop.set_control_flow(ControlFlow::Poll);
+
+    let mut app = App::new(emu);
+    event_loop.run_app(&mut app).unwrap();
 }

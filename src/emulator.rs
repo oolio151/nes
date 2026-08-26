@@ -26,4 +26,13 @@ impl Emulator {
         }
         nmi_fired
     }
+
+    pub fn run_one_frame(&mut self) {
+        loop {
+            self.step();
+            if self.cpu.frame_complete() {
+                break;
+            }
+        }
+    }
 }

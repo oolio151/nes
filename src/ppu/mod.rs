@@ -440,4 +440,8 @@ impl PPU {
         // TODO: wire this through to Mapper::notify_ppu_address once NesBus exposes a path for PPU -> Mapper communication.
         let _ = addr;
     }
+
+    pub fn frame_complete(&self) -> bool {
+        self.scanline == 0 && self.dot == 0
+    }
 }

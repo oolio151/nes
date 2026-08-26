@@ -22,6 +22,7 @@ pub trait Bus {
     fn tick_ppu(&mut self) -> bool;
     fn get_framebuffer(&self) -> &[(u8, u8, u8)];
     fn take_dma_cycles(&mut self) -> u16;
+    fn frame_complete(&self) -> bool;
 }
 
 
@@ -55,6 +56,10 @@ impl Bus for FlatBus {
 
     fn take_dma_cycles(&mut self) -> u16 {
         0
+    }
+
+    fn frame_complete(&self) -> bool {
+        false
     }
 }
 
@@ -110,6 +115,10 @@ impl Bus for NesBus {
         }
 
         514 
+    }
+
+    fn frame_complete(&self) -> bool {
+        self.ppu.frame_complete()
     }
 }
 
@@ -293,6 +302,10 @@ impl CPU {
 
     pub fn framebuffer(&self) -> &[(u8, u8, u8)] {
         self.bus.get_framebuffer()
+    }
+
+    pub fn frame_complete(&self) -> bool {
+        self.bus.frame_complete()
     }
 
 }
