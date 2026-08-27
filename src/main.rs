@@ -4,21 +4,29 @@ use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use oolio151_nes::emulator::Emulator;
 
 const WIDTH: u32 = 256;
 const HEIGHT: u32 = 240;
+const FRAME_TIME: Duration = Duration::from_nanos(16_639_267);
 
 struct App {
     window: Option<Arc<Window>>,
     pixels: Option<Pixels<'static>>,
     emu: Emulator,
+    last_frame: Instant,
 }
 
 impl App {
     fn new(emu: Emulator) -> Self {
-        Self { window: None, pixels: None, emu }
+        Self { 
+            window: None, 
+            pixels: None, 
+            emu, 
+            last_frame: Instant::now() 
+        }
     }
 }
 
@@ -60,6 +68,14 @@ impl ApplicationHandler for App {
                         return;
                     }
                 }
+
+
+                let elapsed = self.last_frame.elapsed();
+                if elapsed < FRAME_TIME {
+                    std::thread::sleep(FRAME_TIME - elapsed);
+                }
+                self.last_frame = Instant::now();
+                
                 if let Some(window) = &self.window {
                     window.request_redraw();
                 }
