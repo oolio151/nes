@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
+use std::io::{self, Write};
 
 use oolio151_nes::emulator::Emulator;
 
@@ -126,7 +127,7 @@ impl ApplicationHandler for App {
 }
 
 fn main() {
-    let rom_path = std::env::args().nth(1).expect("usage: nes <rom_path>");
+    let rom_path = prompt_for_rom_path();
     let emu = Emulator::from_file(&rom_path).expect("failed to load ROM");
 
     let event_loop = EventLoop::new().unwrap();
@@ -134,4 +135,30 @@ fn main() {
 
     let mut app = App::new(emu);
     event_loop.run_app(&mut app).unwrap();
+}
+
+fn prompt_for_rom_path() -> String {
+    loop {
+        print!("Enter path to ROM file: ");
+        io::stdout().flush().unwrap();
+
+        let mut input = String::new();
+        io::stdin()
+            .read_line(&mut input)
+            .expect("failed to read input");
+
+        let path = input.trim();
+
+        if path.is_empty() {
+            println!("Path cannot be empty, try again.");
+            continue;
+        }
+
+        if !std::path::Path::new(path).exists() {
+            println!("No file found at '{}', try again.", path);
+            continue;
+        }
+
+        return path.to_string();
+    }
 }
