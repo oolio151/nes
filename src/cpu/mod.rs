@@ -5,6 +5,7 @@ pub mod mapper;
 use crate::ppu::{PPU};
 use crate::cartridge::Mirroring;
 use mapper::*;
+use crate::input::ControllerState;
 
 pub enum Flag {
     Carry,
@@ -23,6 +24,8 @@ pub trait Bus {
     fn get_framebuffer(&self) -> &[(u8, u8, u8)];
     fn take_dma_cycles(&mut self) -> u16;
     fn frame_complete(&mut self) -> bool;
+    fn set_controller1(&self, buttons: u8) { let _ = buttons; }
+    fn set_controller2(&self, buttons: u8) { let _ = buttons; }
 }
 
 
@@ -70,6 +73,8 @@ pub struct NesBus {
     apu_io: [u8; 24],
     cartridge: Box<dyn Mapper>,
     dma_pending: Option<u8>,
+    controller1: ControllerState,
+    controller2: ControllerState
 }
 
 impl Bus for NesBus {
@@ -77,7 +82,9 @@ impl Bus for NesBus {
         match address {
             0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize],
             0x2000..=0x3FFF => self.ppu.read_register((address & 0x0007) as u8),
-            0x4000..=0x4017 => self.read_apu_io(address),
+            0x4016 => self.controller1.read(),
+            0x4017 => self.controller2.read(),
+            0x4000..=0x4015 => self.read_apu_io(address),
             0x4018..=0x401F => 0,
             0x4020..=0xFFFF => self.cartridge.read(address),
         }
@@ -88,6 +95,10 @@ impl Bus for NesBus {
             0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize] = data,
             0x2000..=0x3FFF => self.ppu.write_register((address & 0x0007) as u8, data),
             0x4014 => self.dma_pending = Some(data),
+            0x4016 => {
+                self.controller1.write_strobe(data);
+                self.controller2.write_strobe(data);
+            }
             0x4000..=0x4017 => self.write_apu_io(address, data),
             0x4018..=0x401F => {},
             0x4020..=0xFFFF => self.cartridge.write(address, data),
@@ -120,6 +131,14 @@ impl Bus for NesBus {
     fn frame_complete(&mut self) -> bool {
         self.ppu.frame_complete()
     }
+
+    fn set_controller1(&self, buttons: u8) {
+        self.controller1.set_buttons(buttons);
+    }
+
+    fn set_controller2(&self, buttons: u8) {
+        self.controller2.set_buttons(buttons);
+    }
 }
 
 impl NesBus {
@@ -131,6 +150,8 @@ impl NesBus {
             apu_io: [0; 24],
             cartridge,
             dma_pending: None, 
+            controller1: ControllerState::new(),
+            controller2: ControllerState::new(),
         }
     }
 
@@ -308,4 +329,11 @@ impl CPU {
         self.bus.frame_complete()
     }
 
+    // passthru to the bus
+    pub fn set_controller1(&self, buttons: u8) {
+        self.bus.set_controller1(buttons);
+    }
+    pub fn set_controller2(&self, buttons: u8) {
+        self.bus.set_controller2(buttons);
+    }
 }

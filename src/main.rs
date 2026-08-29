@@ -5,6 +5,8 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use winit::event::{ElementState, KeyEvent};
+use winit::keyboard::{KeyCode, PhysicalKey};
 
 use oolio151_nes::emulator::Emulator;
 
@@ -19,6 +21,7 @@ struct App {
     last_frame: Instant,
     frame_count: u32,
     fps_timer: Instant,
+    buttons: u8,
 }
 
 impl App {
@@ -30,6 +33,7 @@ impl App {
             last_frame: Instant::now(),
             frame_count: 0,
             fps_timer: Instant::now(),
+            buttons: 0,
         }
     }
 }
@@ -55,6 +59,7 @@ impl ApplicationHandler for App {
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => {
+                self.emu.set_controller1(self.buttons);
                 self.emu.run_one_frame();
 
                 if let Some(pixels) = &mut self.pixels {
@@ -94,6 +99,26 @@ impl ApplicationHandler for App {
                 //     self.frame_count = 0;
                 //     self.fps_timer = Instant::now();
                 // }
+            }
+
+            WindowEvent::KeyboardInput {
+                event: KeyEvent { physical_key: PhysicalKey::Code(code), state, .. },
+                ..
+            } => {
+                let pressed = state == ElementState::Pressed;
+                // make sure to implement custom controls once you get to that
+                let bit: u8 = match code {
+                    KeyCode::KeyZ => 0x01, // a
+                    KeyCode::KeyX => 0x02, // b
+                    KeyCode::KeyA => 0x04, // select
+                    KeyCode::KeyS => 0x08, // start
+                    KeyCode::ArrowUp => 0x10,
+                    KeyCode::ArrowDown => 0x20,
+                    KeyCode::ArrowLeft => 0x40,
+                    KeyCode::ArrowRight => 0x80,
+                    _ => 0,
+                };
+                if pressed { self.buttons |= bit; } else { self.buttons &= !bit; }
             }
             _ => {}
         }

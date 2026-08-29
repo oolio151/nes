@@ -26,7 +26,7 @@ impl Emulator {
         }
         nmi_fired
     }
-
+ 
     pub fn run_one_frame(&mut self) {
         loop {
             self.step();
@@ -34,5 +34,13 @@ impl Emulator {
                 break;
             }
         }
+    }
+
+    // passthru from cpu from bus
+    pub fn set_controller1(&self, buttons: u8) {
+        self.cpu.set_controller1(buttons);
+    }
+    pub fn set_controller2(&self, buttons: u8) {
+        self.cpu.set_controller2(buttons);
     }
 }
