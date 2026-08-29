@@ -17,6 +17,8 @@ struct App {
     pixels: Option<Pixels<'static>>,
     emu: Emulator,
     last_frame: Instant,
+    frame_count: u32,
+    fps_timer: Instant,
 }
 
 impl App {
@@ -25,7 +27,9 @@ impl App {
             window: None, 
             pixels: None, 
             emu, 
-            last_frame: Instant::now() 
+            last_frame: Instant::now(),
+            frame_count: 0,
+            fps_timer: Instant::now(),
         }
     }
 }
@@ -79,6 +83,17 @@ impl ApplicationHandler for App {
                 if let Some(window) = &self.window {
                     window.request_redraw();
                 }
+
+                // this is used for showing the fps in the title bar
+                // self.frame_count += 1;
+                // if self.fps_timer.elapsed().as_secs_f32() >= 1.0 {
+                //     let fps = self.frame_count as f32 / self.fps_timer.elapsed().as_secs_f32();
+                //     if let Some(window) = &self.window {
+                //         window.set_title(&format!("NES Emulator - {:.1} FPS", fps));
+                //     }
+                //     self.frame_count = 0;
+                //     self.fps_timer = Instant::now();
+                // }
             }
             _ => {}
         }

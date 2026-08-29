@@ -22,7 +22,7 @@ pub trait Bus {
     fn tick_ppu(&mut self) -> bool;
     fn get_framebuffer(&self) -> &[(u8, u8, u8)];
     fn take_dma_cycles(&mut self) -> u16;
-    fn frame_complete(&self) -> bool;
+    fn frame_complete(&mut self) -> bool;
 }
 
 
@@ -58,7 +58,7 @@ impl Bus for FlatBus {
         0
     }
 
-    fn frame_complete(&self) -> bool {
+    fn frame_complete(&mut self) -> bool {
         false
     }
 }
@@ -117,7 +117,7 @@ impl Bus for NesBus {
         514 
     }
 
-    fn frame_complete(&self) -> bool {
+    fn frame_complete(&mut self) -> bool {
         self.ppu.frame_complete()
     }
 }
@@ -280,7 +280,7 @@ impl CPU {
         self.push(pc_high);
         self.push(pc_low);
 
-        let mut status = self.p | 0b0010_0000; // masking for safetry
+        let mut status = self.p | 0b0010_0000; // masking for safety
         if set_b {
             status |= 0b0001_0000;
         } else {
@@ -304,7 +304,7 @@ impl CPU {
         self.bus.get_framebuffer()
     }
 
-    pub fn frame_complete(&self) -> bool {
+    pub fn frame_complete(&mut self) -> bool {
         self.bus.frame_complete()
     }
 

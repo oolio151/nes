@@ -113,6 +113,8 @@ pub struct PPU {
     // take a guess what this is genius, 256 by 240
     framebuffer: [(u8, u8, u8); 61440],
 
+    frame_complete_flag: bool,
+
 }
 
 impl PPU {
@@ -181,6 +183,8 @@ impl PPU {
             sprite_zero_current: false,
 
             framebuffer: [(0, 0, 0); 61440],
+
+            frame_complete_flag: false,
             
         }
     }
@@ -347,6 +351,7 @@ impl PPU {
             self.dot = 0;
             self.scanline = 0;
             self.odd_frame = false;
+            self.frame_complete_flag = true;
             return;
         }
 
@@ -371,6 +376,16 @@ impl PPU {
                 self.odd_frame = !self.odd_frame;
             }
         }
+
+        if self.scanline == 0 && self.dot == 0 {
+            self.frame_complete_flag = true;
+        }
+    }
+
+    pub fn frame_complete(&mut self) -> bool {
+        let done = self.frame_complete_flag;
+        self.frame_complete_flag = false;
+        done
     }
 
     pub fn take_nmi(&mut self) -> bool {
@@ -439,9 +454,5 @@ impl PPU {
         // will implement later when the mappers that use this are made
         // TODO: wire this through to Mapper::notify_ppu_address once NesBus exposes a path for PPU -> Mapper communication.
         let _ = addr;
-    }
-
-    pub fn frame_complete(&self) -> bool {
-        self.scanline == 0 && self.dot == 0
     }
 }
