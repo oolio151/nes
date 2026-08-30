@@ -6,6 +6,7 @@ use crate::ppu::{PPU};
 use crate::cartridge::Mirroring;
 use mapper::*;
 use crate::input::ControllerState;
+use crate::apu::APU;
 
 pub enum Flag {
     Carry,
@@ -26,6 +27,8 @@ pub trait Bus {
     fn frame_complete(&mut self) -> bool;
     fn set_controller1(&self, buttons: u8) { let _ = buttons; }
     fn set_controller2(&self, buttons: u8) { let _ = buttons; }
+    fn irq_pending(&self) -> bool { false }
+    fn tick_apu(&mut self, cycles: u32) { let _ = cycles; }
 }
 
 
@@ -70,7 +73,7 @@ impl Bus for FlatBus {
 pub struct NesBus {
     cpu_ram: [u8; 0x0800],
     pub ppu: PPU,
-    apu_io: [u8; 24],
+    pub apu: APU,
     cartridge: Box<dyn Mapper>,
     dma_pending: Option<u8>,
     controller1: ControllerState,
@@ -139,6 +142,14 @@ impl Bus for NesBus {
     fn set_controller2(&self, buttons: u8) {
         self.controller2.set_buttons(buttons);
     }
+
+    fn irq_pending(&self) -> bool {
+         false
+    }
+
+    fn tick_apu(&mut self, cycles: u32) {
+        self.apu.tick(cycles);
+    }
 }
 
 impl NesBus {
@@ -147,7 +158,7 @@ impl NesBus {
         Self {
             cpu_ram: [0; 0x0800],
             ppu: PPU::new(mirroring, chr_rom),
-            apu_io: [0; 24],
+            apu: APU::new(),
             cartridge,
             dma_pending: None, 
             controller1: ControllerState::new(),
@@ -156,10 +167,11 @@ impl NesBus {
     }
 
     fn read_apu_io(&self, address: u16) -> u8 {
-        0
+        self.apu.read_register(address)
     }
 
     fn write_apu_io(&mut self, address: u16, data: u8) {
+        self.apu.write_register(address, data);
     }
 }
 
@@ -225,7 +237,6 @@ impl CPU {
     }
 
     pub fn reset(&mut self){
-        //self.memory = [0; 65536];
         self.a = 0;
         self.x = 0;
         self.y = 0;
@@ -317,6 +328,12 @@ impl CPU {
         self.interrupt(0xFFFA, false);
     }
 
+    pub fn irq(&mut self) {
+        if !self.get_flag(Flag::InterruptDisable) {
+            self.interrupt(0xFFFE, false);
+        }
+    }
+
     pub fn tick_ppu(&mut self) -> bool {
         self.bus.tick_ppu()
     }
@@ -335,5 +352,17 @@ impl CPU {
     }
     pub fn set_controller2(&self, buttons: u8) {
         self.bus.set_controller2(buttons);
+    }
+
+    pub fn irq_pending(&self) -> bool {
+        self.bus.irq_pending()
+    }
+
+    pub fn tick_apu(&mut self, cycles: u32) {
+        self.bus.tick_apu(cycles);
+    }
+
+    fn irq_pending(&self) -> bool {
+        self.apu.frame_irq_pending()
     }
 }

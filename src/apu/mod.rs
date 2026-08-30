@@ -1,3 +1,4 @@
+use std::cell::Cell;
 /*
 APU register reference (in CPU address space)
 0x4000-0x4003 pulse (square) 1 timer, length counter, envelope, sweep
@@ -45,10 +46,55 @@ pub struct APU {
     frame_counter: u8,
 
     // open-bus latch
-    io_latch: u8,
+    io_latch: Cell<u8>,
+
+    frame_cycle: u32,
+    frame_step: u8,
+    mode_5step: bool,
+    irq_inhibit: bool,
+    frame_irq_pending: Cell<bool>,
 }
 
 impl APU {
+
+    pub fn new() -> Self {
+        Self {
+            pulse1_duty_env: 0,
+            pulse1_sweep: 0,
+            pulse1_timer_lo: 0,
+            pulse1_length_timer_hi: 0,
+
+            pulse2_duty_env: 0,
+            pulse2_sweep: 0,
+            pulse2_timer_lo: 0,
+            pulse2_length_timer_hi: 0,
+
+            triangle_linear_ctrl: 0,
+            triangle_timer_lo: 0,
+            triangle_length_timer_hi: 0,
+
+            noise_env: 0,
+            noise_mode_period: 0,
+            noise_length: 0,
+
+            dmc_ctrl: 0,
+            dmc_direct_load: 0,
+            dmc_sample_addr: 0,
+            dmc_sample_len: 0,
+
+            status: 0,
+            frame_counter: 0,
+
+            io_latch: Cell::new(0),
+            
+            frame_cycle: 0,
+            frame_step: 0,
+            mode_5step: false,
+            irq_inhibit: false,
+            frame_irq_pending: Cell::new(false),
+        }
+    }
+
     pub fn write_register(&mut self, addr: u16, data: u8) {
         match addr {
             0x4000 => self.pulse1_duty_env = data,
@@ -77,24 +123,86 @@ impl APU {
             0x4013 => self.dmc_sample_len = data,
 
             0x4015 => self.status = data,
-            0x4017 => self.frame_counter = data,
+            0x4017 => {
+                self.frame_counter = data;
+                self.mode_5step = data & 0x80 != 0;
+                self.irq_inhibit = data & 0x40 != 0;
+                self.frame_cycle = 0;
+                self.frame_step = 0;
+                if self.irq_inhibit {
+                    self.frame_irq_pending.set(false);
+                }
+            }
 
             _ => {}
         }
 
-        self.io_latch = data;
+        self.io_latch.set(data);
     }
 
     pub fn read_register(&mut self, addr: u16) -> u8 {
         match addr {
             0x4015 => {
-                // TODO: build this from real length-counter/IRQ state once channels exist (IF-D NT21)
-                let status_bytes = 0; // replace with real bit assembly later
-                self.io_latch = status_bytes;
+                let was_pending = self.frame_irq_pending.get();
+                self.frame_irq_pending.set(false);
+                let status_bytes = (was_pending as u8) << 6;
+                self.io_latch.set(status_bytes);
                 status_bytes
             }
 
-            _ => self.io_latch,
+            _ => self.io_latch.get(),
         }
+    }
+
+    pub fn tick(&mut self, cycles: u32) {
+        self.frame_cycle += cycles;
+
+        loop {
+            let step_count = if self.mode_5step { 5 } else { 4 };
+            let boundaries: &[u32] = if self.mode_5step {
+                &[7457, 14913, 22371, 29829, 37281]
+            } else {
+                &[7457, 14913, 22371, 29829]
+            };
+
+            let boundary = boundaries[self.frame_step as usize];
+            if self.frame_cycle < boundary {
+                break;
+            }
+
+            self.fire_step(self.frame_step);
+
+            self.frame_step += 1;
+            if self.frame_step >= step_count {
+                self.frame_step = 0;
+                self.frame_cycle -= boundary;
+            }
+        }
+    }
+
+    fn fire_step(&mut self, step: u8) {
+        let is_last_step = if self.mode_5step { step == 4 } else { step == 3 };
+
+        let clocks_envelope = !(self.mode_5step && step == 3);
+        if clocks_envelope {
+            // TODO: clock envelope + linear counter on channels once they exist
+        }
+
+        let clocks_length_sweep = if self.mode_5step {
+            step == 1 || step == 4
+        } else {
+            step == 1 || step == 3
+        };
+        if clocks_length_sweep {
+            // TODO: clock length counters + sweep units on channels once they exist
+        }
+
+        if !self.mode_5step && is_last_step && !self.irq_inhibit {
+            self.frame_irq_pending.set(true);
+        }
+    }
+
+    pub fn frame_irq_pending(&self) -> bool {
+        self.frame_irq_pending.get()
     }
 }
