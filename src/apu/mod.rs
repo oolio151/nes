@@ -140,7 +140,7 @@ impl APU {
         self.io_latch.set(data);
     }
 
-    pub fn read_register(&mut self, addr: u16) -> u8 {
+    pub fn read_register(&self, addr: u16) -> u8 {
         match addr {
             0x4015 => {
                 let was_pending = self.frame_irq_pending.get();

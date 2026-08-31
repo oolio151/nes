@@ -144,7 +144,7 @@ impl Bus for NesBus {
     }
 
     fn irq_pending(&self) -> bool {
-         false
+         self.apu.frame_irq_pending()
     }
 
     fn tick_apu(&mut self, cycles: u32) {
@@ -360,9 +360,5 @@ impl CPU {
 
     pub fn tick_apu(&mut self, cycles: u32) {
         self.bus.tick_apu(cycles);
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.apu.frame_irq_pending()
     }
 }
