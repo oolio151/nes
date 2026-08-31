@@ -52,4 +52,10 @@ impl Emulator {
     pub fn set_controller2(&self, buttons: u8) {
         self.cpu.set_controller2(buttons);
     }
+
+    pub fn reset(&mut self) {
+        self.cpu.reset();
+        self.cpu.reset_ppu();
+        self.cpu.reset_apu();
+    }
 }

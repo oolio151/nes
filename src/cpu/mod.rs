@@ -29,6 +29,8 @@ pub trait Bus {
     fn set_controller2(&self, buttons: u8) { let _ = buttons; }
     fn irq_pending(&self) -> bool { false }
     fn tick_apu(&mut self, cycles: u32) { let _ = cycles; }
+    fn reset_ppu(&mut self) { }
+    fn reset_apu(&mut self) { }
 }
 
 
@@ -150,6 +152,14 @@ impl Bus for NesBus {
     fn tick_apu(&mut self, cycles: u32) {
         self.apu.tick(cycles);
     }
+
+    // reset
+    fn reset_ppu(&mut self) {
+        self.ppu.reset();
+    }
+    fn reset_apu(&mut self) {
+        self.apu.reset();
+    }
 }
 
 impl NesBus {
@@ -242,7 +252,7 @@ impl CPU {
         self.y = 0;
         self.pc = (self.read(0xFFFC) as u16) | ((self.read(0xFFFD) as u16) << 8);
         self.s = 0xFD;
-        self.p = 0b0010_0000;
+        self.p = 0b0010_0100;
         self.cycle_count = 0;
     }
 
@@ -360,5 +370,13 @@ impl CPU {
 
     pub fn tick_apu(&mut self, cycles: u32) {
         self.bus.tick_apu(cycles);
+    }
+
+    // for reset
+    pub fn reset_ppu(&mut self) {
+        self.bus.reset_ppu();
+    }
+    pub fn reset_apu(&mut self) {
+        self.bus.reset_apu();
     }
 }

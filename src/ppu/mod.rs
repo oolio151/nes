@@ -455,5 +455,31 @@ impl PPU {
         // TODO: wire this through to Mapper::notify_ppu_address once NesBus exposes a path for PPU -> Mapper communication.
         let _ = addr;
     }
+
+    pub fn reset(&mut self) {
+        self.nmi_enable = false;
+        self.sprites_8x16 = false;
+        self.bg_pattern_table_addr = 0;
+        self.sprite_pattern_table_addr = 0;
+        self.vram_addr_inc = 1;
+
+        self.emphasize_blue = false;
+        self.emphasize_green = false;
+        self.emphasize_red = false;
+        self.sprite_rendering = false;
+        self.bg_rendering = false;
+        self.show_sprites_in_leftmost = false;
+        self.show_bg_in_leftmost = false;
+        self.grayscale = false;
+
+        self.t = 0;
+        self.x = 0;
+        self.w.set(false);
+
+        self.read_buffer.set(0);
+        self.odd_frame = false;
+        self.nmi_pending = false;
+
+    }
     
 }

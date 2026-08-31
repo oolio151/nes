@@ -205,4 +205,11 @@ impl APU {
     pub fn frame_irq_pending(&self) -> bool {
         self.frame_irq_pending.get()
     }
+
+    pub fn reset(&mut self) {
+        self.status = 0;
+
+        self.frame_cycle = 0;
+        self.frame_step = 0;
+    }
 }

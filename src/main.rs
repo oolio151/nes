@@ -120,6 +120,11 @@ impl ApplicationHandler for App {
                     _ => 0,
                 };
                 if pressed { self.buttons |= bit; } else { self.buttons &= !bit; }
+
+                match code {
+                    KeyCode::KeyR if pressed => { self.emu.reset(); }
+                    _ => {}
+                }
             }
             _ => {}
         }
