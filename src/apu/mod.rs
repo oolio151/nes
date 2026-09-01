@@ -1,4 +1,10 @@
 use std::cell::Cell;
+
+pub mod consts;
+pub mod pulse;
+
+use crate::apu::pulse::PulseChannel;
+
 /*
 APU register reference (in CPU address space)
 0x4000-0x4003 pulse (square) 1 timer, length counter, envelope, sweep
@@ -14,16 +20,11 @@ https://www.nesdev.org/wiki/APU_registers
 pub struct APU {
     // register stuff
     // pulse 1 channel
-    pulse1_duty_env: u8, // 00
-    pulse1_sweep: u8, // 01
-    pulse1_timer_lo: u8, // 02
-    pulse1_length_timer_hi: u8, // 03
+    pulse1: PulseChannel,
 
     // pulse 2 channel
-    pulse2_duty_env: u8, // 04
-    pulse2_sweep: u8, // 05
-    pulse2_timer_lo: u8, // 06
-    pulse2_length_timer_hi: u8, // 07
+    pulse2: PulseChannel,
+    cycle_parity: bool,
 
     // triangle
     triangle_linear_ctrl: u8, // 08
@@ -59,15 +60,9 @@ impl APU {
 
     pub fn new() -> Self {
         Self {
-            pulse1_duty_env: 0,
-            pulse1_sweep: 0,
-            pulse1_timer_lo: 0,
-            pulse1_length_timer_hi: 0,
-
-            pulse2_duty_env: 0,
-            pulse2_sweep: 0,
-            pulse2_timer_lo: 0,
-            pulse2_length_timer_hi: 0,
+            pulse1: PulseChannel::new(false),
+            pulse2: PulseChannel::new(true),
+            cycle_parity: false,
 
             triangle_linear_ctrl: 0,
             triangle_timer_lo: 0,
@@ -97,15 +92,15 @@ impl APU {
 
     pub fn write_register(&mut self, addr: u16, data: u8) {
         match addr {
-            0x4000 => self.pulse1_duty_env = data,
-            0x4001 => self.pulse1_sweep = data,
-            0x4002 => self.pulse1_timer_lo = data,
-            0x4003 => self.pulse1_length_timer_hi = data,
+            0x4000 => self.pulse1.write_duty_env(data),
+            0x4001 => self.pulse1.write_sweep(data),
+            0x4002 => self.pulse1.write_timer_lo(data),
+            0x4003 => self.pulse1.write_length_timer_hi(data),
 
-            0x4004 => self.pulse2_duty_env = data,
-            0x4005 => self.pulse2_sweep = data,
-            0x4006 => self.pulse2_timer_lo = data,
-            0x4007 => self.pulse2_length_timer_hi = data,
+            0x4004 => self.pulse2.write_duty_env(data),
+            0x4005 => self.pulse2.write_sweep(data),
+            0x4006 => self.pulse2.write_timer_lo(data),
+            0x4007 => self.pulse2.write_length_timer_hi(data),
 
             0x4008 => self.triangle_linear_ctrl = data,
             0x4009 => {}
@@ -122,7 +117,12 @@ impl APU {
             0x4012 => self.dmc_sample_addr = data,
             0x4013 => self.dmc_sample_len = data,
 
-            0x4015 => self.status = data,
+            0x4015 => {
+                self.status = data;
+                self.pulse1.set_enabled(data & 0x01 != 0);
+                self.pulse2.set_enabled(data & 0x02 != 0);
+            },
+
             0x4017 => {
                 self.frame_counter = data;
                 self.mode_5step = data & 0x80 != 0;
@@ -178,6 +178,14 @@ impl APU {
                 self.frame_cycle -= boundary;
             }
         }
+
+        for _ in 0..cycles {
+            self.cycle_parity = !self.cycle_parity;
+            if self.cycle_parity {
+                self.pulse1.tick_timer();
+                self.pulse2.tick_timer();
+            }
+        }
     }
 
     fn fire_step(&mut self, step: u8) {
@@ -211,5 +219,10 @@ impl APU {
 
         self.frame_cycle = 0;
         self.frame_step = 0;
+
+        self.pulse1.set_enabled(false);
+        self.pulse2.set_enabled(false);
     }
+
+    
 }

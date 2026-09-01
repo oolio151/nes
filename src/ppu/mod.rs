@@ -436,20 +436,6 @@ impl PPU {
         index as usize
     }
 
-    // does the mini 4 color pallette shit
-    fn tile_pixel(&self, table_base: u16, tile_index: u8, row: u8, col: u8) -> u8 {
-        let tile_addr = table_base + (tile_index as u16 * 16);
-
-        let plane0 = self.read_vram(tile_addr + row as u16);
-        let plane1 = self.read_vram(tile_addr + row as u16 + 8);
-
-        let bit = 7 - col;
-        let lo = (plane0 >> bit) & 1;
-        let hi = (plane1 >> bit) & 1;
-
-        (hi << 1) | lo
-    }
-
     fn notify_mapper(&self, addr: u16) {
         // will implement later when the mappers that use this are made
         // TODO: wire this through to Mapper::notify_ppu_address once NesBus exposes a path for PPU -> Mapper communication.

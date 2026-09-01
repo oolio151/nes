@@ -407,7 +407,7 @@ pub fn decode(opcode: u8) -> (fn(&mut CPU) -> u8, u8) {
         // TAS
         0x9B => (tas_absolutey, 5),
 
-        _ => panic!("unknown opcode: {:02X}", opcode)
+        //_ => panic!("unknown opcode: {:02X}", opcode)
     }
 }
 
