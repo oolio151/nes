@@ -116,4 +116,63 @@ impl PulseChannel {
         let duty = (self.duty_env >> 6) & 0x03;
         DUTY_TABLE[duty as usize][self.sequencer_pos as usize]
     }
-}
+
+    pub fn clock_envelope(&mut self) {
+        if self.envelope_start {
+            self.envelope_start = false;
+            self.envelope_decay = 15;
+            self.envelope_counter = self.volume_or_period;
+        } else if self.envelope_counter > 0 {
+            self.envelope_counter -= 1;
+        } else {
+            self.envelope_counter = self.volume_or_period;
+            if self.envelope_decay > 0 {
+                self.envelope_decay -= 1;
+            } else if self.length_halt {
+                self.envelope_decay = 15;
+            }
+        }
+    }
+
+    pub fn current_volume(&self) -> u8 {
+        if self.constant_volume {
+            self.volume_or_period
+        } else {
+            self.envelope_decay
+        }
+    }
+
+    pub fn clock_length_counter(&mut self) {
+        if !self.length_halt && self.length_counter > 0 {
+            self.length_counter -= 1;
+        }
+    }
+
+    // highkey claude wrote ts
+    pub fn clock_sweep(&mut self) {
+        let change_amount = self.timer_period >> self.sweep_shift;
+
+        let target_period = if self.sweep_negate {
+            if self.is_channel2 {
+                self.timer_period.wrapping_sub(change_amount)
+            } else {
+                self.timer_period.wrapping_sub(change_amount).wrapping_sub(1)
+            }
+        } else {
+            self.timer_period.wrapping_add(change_amount)
+        };
+
+        let muting = self.timer_period < 8 || target_period > 0x7FF;
+
+        if self.sweep_counter == 0 && self.sweep_enabled && self.sweep_shift > 0 && !muting {
+            self.timer_period = target_period;
+        }
+
+        if self.sweep_counter == 0 || self.sweep_reload {
+            self.sweep_counter = self.sweep_period;
+            self.sweep_reload = false;
+        } else {
+            self.sweep_counter -= 1;
+        }
+    }
+    }

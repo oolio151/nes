@@ -1,6 +1,5 @@
 use std::cell::Cell;
 use crate::cartridge::Mirroring;
-use palette::NES_PALETTE;
 
 pub mod palette;
 pub mod rendering;

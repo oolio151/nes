@@ -91,15 +91,15 @@ impl ApplicationHandler for App {
                 }
 
                 // this is used for showing the fps in the title bar
-                // self.frame_count += 1;
-                // if self.fps_timer.elapsed().as_secs_f32() >= 1.0 {
-                //     let fps = self.frame_count as f32 / self.fps_timer.elapsed().as_secs_f32();
-                //     if let Some(window) = &self.window {
-                //         window.set_title(&format!("NES Emulator - {:.1} FPS", fps));
-                //     }
-                //     self.frame_count = 0;
-                //     self.fps_timer = Instant::now();
-                // }
+                self.frame_count += 1;
+                if self.fps_timer.elapsed().as_secs_f32() >= 1.0 {
+                    let fps = self.frame_count as f32 / self.fps_timer.elapsed().as_secs_f32();
+                    if let Some(window) = &self.window {
+                        window.set_title(&format!("NES Emulator - {:.1} FPS", fps));
+                    }
+                    self.frame_count = 0;
+                    self.fps_timer = Instant::now();
+                }
             }
 
             WindowEvent::KeyboardInput {

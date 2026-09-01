@@ -1,8 +1,6 @@
 use crate::cpu::CPU;
 use crate::cpu::NesBus;
 use crate::cartridge::load_rom_from_file;
-use crate::apu::APU;
-
 pub struct Emulator {
     pub cpu: CPU,
 }

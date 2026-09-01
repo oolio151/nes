@@ -193,7 +193,8 @@ impl APU {
 
         let clocks_envelope = !(self.mode_5step && step == 3);
         if clocks_envelope {
-            // TODO: clock envelope + linear counter on channels once they exist
+            self.pulse1.clock_envelope();
+            self.pulse2.clock_envelope();
         }
 
         let clocks_length_sweep = if self.mode_5step {
@@ -202,7 +203,10 @@ impl APU {
             step == 1 || step == 3
         };
         if clocks_length_sweep {
-            // TODO: clock length counters + sweep units on channels once they exist
+            self.pulse1.clock_length_counter();
+            self.pulse1.clock_sweep();
+            self.pulse2.clock_length_counter();
+            self.pulse2.clock_sweep();
         }
 
         if !self.mode_5step && is_last_step && !self.irq_inhibit {
@@ -224,5 +228,6 @@ impl APU {
         self.pulse2.set_enabled(false);
     }
 
+    
     
 }
