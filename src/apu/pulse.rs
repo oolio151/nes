@@ -175,4 +175,34 @@ impl PulseChannel {
             self.sweep_counter -= 1;
         }
     }
+
+    pub fn output(&self) -> u8 {
+        if !self.enabled {
+            return 0;
+        }
+        if self.length_counter == 0 {
+            return 0;
+        }
+        if self.is_sweep_muting() {
+            return 0;
+        }
+        if self.current_duty_output() == 0 {
+            return 0;
+        }
+        self.current_volume()
     }
+
+    fn is_sweep_muting(&self) -> bool {
+        let change_amount = self.timer_period >> self.sweep_shift;
+        let target_period = if self.sweep_negate {
+            if self.is_channel2 {
+                self.timer_period.wrapping_sub(change_amount)
+            } else {
+                self.timer_period.wrapping_sub(change_amount).wrapping_sub(1)
+            }
+        } else {
+            self.timer_period.wrapping_add(change_amount)
+        };
+        self.timer_period < 8 || target_period > 0x7FF
+    }
+}

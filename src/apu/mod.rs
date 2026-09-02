@@ -2,9 +2,12 @@ use std::cell::Cell;
 
 pub mod consts;
 pub mod pulse;
+pub mod triangle;
+pub mod noise;
 
 use crate::apu::pulse::PulseChannel;
-
+use crate::apu::noise::NoiseChannel;
+use crate::apu::triangle::TriangleChannel;
 /*
 APU register reference (in CPU address space)
 0x4000-0x4003 pulse (square) 1 timer, length counter, envelope, sweep
@@ -27,14 +30,10 @@ pub struct APU {
     cycle_parity: bool,
 
     // triangle
-    triangle_linear_ctrl: u8, // 08
-    triangle_timer_lo: u8, // 0A
-    triangle_length_timer_hi: u8, //0B
+    triangle: TriangleChannel,
 
     // noise channel
-    noise_env: u8,
-    noise_mode_period: u8,
-    noise_length: u8,
+    noise: NoiseChannel,
 
     // dmc channel
     dmc_ctrl: u8,
@@ -64,13 +63,9 @@ impl APU {
             pulse2: PulseChannel::new(true),
             cycle_parity: false,
 
-            triangle_linear_ctrl: 0,
-            triangle_timer_lo: 0,
-            triangle_length_timer_hi: 0,
+            triangle: TriangleChannel::new(),
 
-            noise_env: 0,
-            noise_mode_period: 0,
-            noise_length: 0,
+            noise: NoiseChannel::new(),
 
             dmc_ctrl: 0,
             dmc_direct_load: 0,
@@ -102,15 +97,15 @@ impl APU {
             0x4006 => self.pulse2.write_timer_lo(data),
             0x4007 => self.pulse2.write_length_timer_hi(data),
 
-            0x4008 => self.triangle_linear_ctrl = data,
+            0x4008 => self.triangle.write_linear_ctrl(data),
             0x4009 => {}
-            0x400A => self.triangle_timer_lo = data,
-            0x400B => self.triangle_length_timer_hi = data,
+            0x400A => self.triangle.write_timer_lo(data),
+            0x400B => self.triangle.write_length_timer_hi(data),
 
-            0x400C => self.noise_env = data,
+            0x400C => self.noise.write_env(data),
             0x400D => {}
-            0x400E => self.noise_mode_period = data,
-            0x400F => self.noise_length = data,
+            0x400E => self.noise.write_mode_period(data),
+            0x400F => self.noise.write_length(data),
 
             0x4010 => self.dmc_ctrl = data,
             0x4011 => self.dmc_direct_load = data,
@@ -121,6 +116,8 @@ impl APU {
                 self.status = data;
                 self.pulse1.set_enabled(data & 0x01 != 0);
                 self.pulse2.set_enabled(data & 0x02 != 0);
+                self.triangle.set_enabled(data & 0x04 != 0);
+                self.noise.set_enabled(data & 0x08 != 0);
             },
 
             0x4017 => {
@@ -184,7 +181,12 @@ impl APU {
             if self.cycle_parity {
                 self.pulse1.tick_timer();
                 self.pulse2.tick_timer();
+                self.noise.tick_timer();
             }
+        }
+
+        for _ in 0..cycles {
+            self.triangle.tick_timer();
         }
     }
 
@@ -195,6 +197,8 @@ impl APU {
         if clocks_envelope {
             self.pulse1.clock_envelope();
             self.pulse2.clock_envelope();
+            self.noise.clock_envelope();
+            self.triangle.clock_linear_counter();
         }
 
         let clocks_length_sweep = if self.mode_5step {
@@ -202,11 +206,14 @@ impl APU {
         } else {
             step == 1 || step == 3
         };
+
         if clocks_length_sweep {
             self.pulse1.clock_length_counter();
             self.pulse1.clock_sweep();
             self.pulse2.clock_length_counter();
             self.pulse2.clock_sweep();
+            self.triangle.clock_length_counter();
+            self.noise.clock_length_counter();
         }
 
         if !self.mode_5step && is_last_step && !self.irq_inhibit {
@@ -226,6 +233,9 @@ impl APU {
 
         self.pulse1.set_enabled(false);
         self.pulse2.set_enabled(false);
+
+        self.triangle.set_enabled(false);
+        self.noise.set_enabled(false);
     }
 
     
