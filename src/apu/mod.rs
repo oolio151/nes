@@ -1,13 +1,23 @@
+/*
+bugs im deferring for later because i am lazy
+- dmc stall cycles on the cpu
+- some sub cycle stuff on write to 0x4017
+
+
+*/
+
 use std::cell::Cell;
 
 pub mod consts;
 pub mod pulse;
 pub mod triangle;
 pub mod noise;
+pub mod dmc;
 
 use crate::apu::pulse::PulseChannel;
 use crate::apu::noise::NoiseChannel;
 use crate::apu::triangle::TriangleChannel;
+use crate::apu::dmc::DmcChannel;
 /*
 APU register reference (in CPU address space)
 0x4000-0x4003 pulse (square) 1 timer, length counter, envelope, sweep
@@ -21,7 +31,6 @@ APU register reference (in CPU address space)
 https://www.nesdev.org/wiki/APU_registers
 */
 pub struct APU {
-    // register stuff
     // pulse 1 channel
     pulse1: PulseChannel,
 
@@ -36,10 +45,7 @@ pub struct APU {
     noise: NoiseChannel,
 
     // dmc channel
-    dmc_ctrl: u8,
-    dmc_direct_load: u8,
-    dmc_sample_addr: u8,
-    dmc_sample_len: u8,
+    dmc: DmcChannel,
 
     // misc registers
     status: u8,
@@ -67,10 +73,7 @@ impl APU {
 
             noise: NoiseChannel::new(),
 
-            dmc_ctrl: 0,
-            dmc_direct_load: 0,
-            dmc_sample_addr: 0,
-            dmc_sample_len: 0,
+            dmc: DmcChannel::new(),
 
             status: 0,
             frame_counter: 0,
@@ -107,10 +110,10 @@ impl APU {
             0x400E => self.noise.write_mode_period(data),
             0x400F => self.noise.write_length(data),
 
-            0x4010 => self.dmc_ctrl = data,
-            0x4011 => self.dmc_direct_load = data,
-            0x4012 => self.dmc_sample_addr = data,
-            0x4013 => self.dmc_sample_len = data,
+            0x4010 => self.dmc.write_ctrl(data),
+            0x4011 => self.dmc.write_direct_load(data),
+            0x4012 => self.dmc.write_sample_addr(data),
+            0x4013 => self.dmc.write_sample_length(data),
 
             0x4015 => {
                 self.status = data;
@@ -118,6 +121,8 @@ impl APU {
                 self.pulse2.set_enabled(data & 0x02 != 0);
                 self.triangle.set_enabled(data & 0x04 != 0);
                 self.noise.set_enabled(data & 0x08 != 0);
+                self.dmc.set_enabled(data & 0x10 != 0);
+                self.dmc.clear_irq();
             },
 
             0x4017 => {
@@ -140,9 +145,38 @@ impl APU {
     pub fn read_register(&self, addr: u16) -> u8 {
         match addr {
             0x4015 => {
-                let was_pending = self.frame_irq_pending.get();
+                let mut status_bytes = 0u8;
+
+                if self.pulse1.length_counter_active() {
+                    status_bytes |= 0x01;
+                }
+                
+                if self.pulse2.length_counter_active() {
+                    status_bytes |= 0x02;
+                }
+
+                if self.triangle.length_counter_active() {
+                    status_bytes |= 0x04;
+                }
+
+                if self.noise.length_counter_active() {
+                    status_bytes |= 0x08;
+                }
+
+                if self.dmc.is_active() {
+                    status_bytes |= 0x10;
+                }
+
+                if self.frame_irq_pending.get() {
+                    status_bytes |= 0x40;
+                }
+
+                if self.dmc.irq_pending() {
+                    status_bytes |= 0x80;
+                }
+
                 self.frame_irq_pending.set(false);
-                let status_bytes = (was_pending as u8) << 6;
+
                 self.io_latch.set(status_bytes);
                 status_bytes
             }
@@ -182,6 +216,7 @@ impl APU {
                 self.pulse1.tick_timer();
                 self.pulse2.tick_timer();
                 self.noise.tick_timer();
+                self.dmc.tick_timer();
             }
         }
 
@@ -236,8 +271,20 @@ impl APU {
 
         self.triangle.set_enabled(false);
         self.noise.set_enabled(false);
+        
+        self.dmc.set_enabled(false);
     }
 
-    
+    pub fn dmc_fetch_request(&self) -> Option<u16> {
+        self.dmc.fetch_request()
+    }
+
+    pub fn dmc_provide_byte(&mut self, byte: u8) {
+        self.dmc.provide_byte(byte);
+    }
+
+    pub fn dmc_irq_pending(&self) -> bool {
+        self.dmc.irq_pending()
+    }
     
 }

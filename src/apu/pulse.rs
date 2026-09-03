@@ -205,4 +205,8 @@ impl PulseChannel {
         };
         self.timer_period < 8 || target_period > 0x7FF
     }
+
+    pub fn length_counter_active(&self) -> bool {
+        self.length_counter > 0
+    }
 }

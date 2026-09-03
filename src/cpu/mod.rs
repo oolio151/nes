@@ -146,11 +146,15 @@ impl Bus for NesBus {
     }
 
     fn irq_pending(&self) -> bool {
-         self.apu.frame_irq_pending()
+        self.apu.frame_irq_pending() || self.apu.dmc_irq_pending()
     }
 
     fn tick_apu(&mut self, cycles: u32) {
         self.apu.tick(cycles);
+        if let Some(addr) = self.apu.dmc_fetch_request() {
+            let byte = self.read(addr);
+            self.apu.dmc_provide_byte(byte);
+        }
     }
 
     // reset

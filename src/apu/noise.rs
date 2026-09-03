@@ -125,4 +125,8 @@ impl NoiseChannel {
         }
         self.current_volume()
     }
+
+    pub fn length_counter_active(&self) -> bool {
+        self.length_counter > 0
+    }
 }

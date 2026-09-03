@@ -104,4 +104,8 @@ impl TriangleChannel {
         }
         TRIANGLE_TABLE[self.sequencer_pos as usize]
     }
+
+    pub fn length_counter_active(&self) -> bool {
+        self.length_counter > 0
+    }
 }
