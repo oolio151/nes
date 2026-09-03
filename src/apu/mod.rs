@@ -59,6 +59,11 @@ pub struct APU {
     mode_5step: bool,
     irq_inhibit: bool,
     frame_irq_pending: Cell<bool>,
+
+    // used for proper timing of audio
+    sample_acc: f32,
+    cycles_per_sample: f32,
+    sample_buffer: Vec<f32>,
 }
 
 impl APU {
@@ -85,6 +90,10 @@ impl APU {
             mode_5step: false,
             irq_inhibit: false,
             frame_irq_pending: Cell::new(false),
+
+            sample_acc: 0.0,
+            cycles_per_sample: 1789773.0 / 44100.0,
+            sample_buffer: Vec::new(),
         }
     }
 
@@ -223,6 +232,13 @@ impl APU {
         for _ in 0..cycles {
             self.triangle.tick_timer();
         }
+
+        self.sample_acc += cycles as f32;
+        while self.sample_acc >= self.cycles_per_sample {
+            self.sample_acc -= self.cycles_per_sample;
+            let s = self.sample();
+            self.sample_buffer.push(s);
+        }
     }
 
     fn fire_step(&mut self, step: u8) {
@@ -287,4 +303,30 @@ impl APU {
         self.dmc.irq_pending()
     }
     
+    pub fn sample(&self) -> f32 {
+        let pulse1 = self.pulse1.output() as f32;
+        let pulse2 = self.pulse2.output() as f32;
+        let triangle = self.triangle.output() as f32;
+        let noise = self.noise.output() as f32;
+        let dmc = self.dmc.output() as f32;
+
+        let pulse_out = if pulse1 + pulse2 == 0.0 {
+            0.0
+        } else {
+            95.88 / ((8128.0 / (pulse1 + pulse2)) + 100.0)
+        };
+
+        let tnd_sum = triangle / 8227.0 + noise / 12241.0 + dmc / 22638.0;
+        let tnd_out = if tnd_sum == 0.0 {
+            0.0
+        } else {
+            159.79 / ((1.0 / tnd_sum) + 100.0)
+        };
+
+        pulse_out + tnd_out
+    }
+
+    pub fn drain_samples(&mut self) -> Vec<f32> {
+        std::mem::take(&mut self.sample_buffer)
+    }
 }
