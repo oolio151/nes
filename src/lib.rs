@@ -4,3 +4,4 @@ pub mod apu;
 pub mod cartridge;
 pub mod emulator;
 pub mod input; 
+pub mod audio;

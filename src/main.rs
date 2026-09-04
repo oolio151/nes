@@ -9,8 +9,11 @@ use std::time::{Duration, Instant};
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use std::io::{self, Write};
-
+use std::sync::{Mutex};
+use std::collections::VecDeque;
 use oolio151_nes::emulator::Emulator;
+
+type SharedAudioBuffer = Arc<Mutex<VecDeque<f32>>>;
 
 const WIDTH: u32 = 256;
 const HEIGHT: u32 = 240;
@@ -31,10 +34,18 @@ struct App {
     fps_timer: Instant,
     buttons: u8,
     notification: Option<Notification>,
+    audio_buffer: SharedAudioBuffer,
+    max_audio_buffer: usize,
+    _stream: cpal::Stream,
 }
 
 impl App {
-    fn new(emu: Emulator) -> Self {
+    fn new(
+        emu: Emulator,
+        audio_buffer: SharedAudioBuffer,
+        sample_rate: u32,
+        stream: cpal::Stream,
+    ) -> Self {
         Self { 
             window: None, 
             pixels: None, 
@@ -44,6 +55,9 @@ impl App {
             fps_timer: Instant::now(),
             buttons: 0,
             notification: None,
+            audio_buffer,
+            max_audio_buffer: sample_rate as usize / 5,
+            _stream: stream,
         }
     }
 
@@ -88,6 +102,17 @@ impl ApplicationHandler for App {
             WindowEvent::RedrawRequested => {
                 self.emu.set_controller1(self.buttons);
                 self.emu.run_one_frame();
+
+                let samples = self.emu.drain_audio_samples();
+
+                {
+                    let mut buf = self.audio_buffer.lock().unwrap();
+                    buf.extend(samples);
+
+                    while buf.len() > self.max_audio_buffer {
+                        buf.pop_front();
+                    }
+                }
 
                 if self
                     .notification
@@ -218,12 +243,17 @@ fn put_pixel(frame: &mut [u8], x: u32, y: u32, color: [u8; 4]) {
 
 fn main() {
     let rom_path = prompt_for_rom_path();
-    let emu = Emulator::from_file(&rom_path).expect("failed to load ROM");
+    let mut emu = Emulator::from_file(&rom_path).expect("failed to load ROM");
 
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(ControlFlow::Poll);
 
-    let mut app = App::new(emu);
+    let audio_buffer: SharedAudioBuffer = Arc::new(Mutex::new(VecDeque::new()));
+    let audio = oolio151_nes::audio::build_audio_stream(audio_buffer.clone());
+    emu.set_audio_sample_rate(audio.sample_rate);
+
+    let mut app = App::new(emu, audio_buffer, audio.sample_rate, audio.stream);
+
     event_loop.run_app(&mut app).unwrap();
 }
 

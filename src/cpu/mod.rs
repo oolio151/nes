@@ -31,6 +31,9 @@ pub trait Bus {
     fn tick_apu(&mut self, cycles: u32) { let _ = cycles; }
     fn reset_ppu(&mut self) { }
     fn reset_apu(&mut self) { }
+    fn drain_audio_samples(&mut self) -> Vec<f32> { Vec::new() }
+    fn set_audio_sample_rate(&mut self, sample_rate: u32) { let _ = sample_rate; }
+
 }
 
 
@@ -164,6 +167,15 @@ impl Bus for NesBus {
     fn reset_apu(&mut self) {
         self.apu.reset();
     }
+
+    fn drain_audio_samples(&mut self) -> Vec<f32> {
+        self.apu.drain_samples()
+    }
+
+    fn set_audio_sample_rate(&mut self, sample_rate: u32) {
+        self.apu.set_sample_rate(sample_rate);
+    }
+
 }
 
 impl NesBus {
@@ -382,5 +394,13 @@ impl CPU {
     }
     pub fn reset_apu(&mut self) {
         self.bus.reset_apu();
+    }
+
+    pub fn drain_audio_samples(&mut self) -> Vec<f32> {
+        self.bus.drain_audio_samples()
+    }
+
+    pub fn set_audio_sample_rate(&mut self, sample_rate: u32) {
+        self.bus.set_audio_sample_rate(sample_rate);
     }
 }

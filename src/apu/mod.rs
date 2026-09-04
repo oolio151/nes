@@ -64,6 +64,50 @@ pub struct APU {
     sample_acc: f32,
     cycles_per_sample: f32,
     sample_buffer: Vec<f32>,
+    filter: AudioFilter,
+}
+
+struct AudioFilter {
+    hp90_alpha: f32,
+    hp440_alpha: f32,
+    lp14k_alpha: f32,
+    hp90_prev_in: f32,
+    hp90_prev_out: f32,
+    hp440_prev_in: f32,
+    hp440_prev_out: f32,
+    lp14k_prev_out: f32,
+}
+
+impl AudioFilter {
+    fn new(sample_rate: f32) -> Self {
+        let dt = 1.0 / sample_rate;
+        let hp_alpha = |cutoff: f32| {
+            let rc = 1.0 / (2.0 * std::f32::consts::PI * cutoff);
+            rc / (rc + dt)
+        };
+        let lp_rc = 1.0 / (2.0 * std::f32::consts::PI * 14_000.0);
+        Self {
+            hp90_alpha: hp_alpha(90.0),
+            hp440_alpha: hp_alpha(440.0),
+            lp14k_alpha: dt / (lp_rc + dt),
+            hp90_prev_in: 0.0,
+            hp90_prev_out: 0.0,
+            hp440_prev_in: 0.0,
+            hp440_prev_out: 0.0,
+            lp14k_prev_out: 0.0,
+        }
+    }
+
+    fn process(&mut self, input: f32) -> f32 {
+        let hp90 = self.hp90_alpha * (self.hp90_prev_out + input - self.hp90_prev_in);
+        self.hp90_prev_in = input;
+        self.hp90_prev_out = hp90;
+        let hp440 = self.hp440_alpha * (self.hp440_prev_out + hp90 - self.hp440_prev_in);
+        self.hp440_prev_in = hp90;
+        self.hp440_prev_out = hp440;
+        self.lp14k_prev_out += self.lp14k_alpha * (hp440 - self.lp14k_prev_out);
+        self.lp14k_prev_out
+    }
 }
 
 impl APU {
@@ -94,6 +138,7 @@ impl APU {
             sample_acc: 0.0,
             cycles_per_sample: 1789773.0 / 44100.0,
             sample_buffer: Vec::new(),
+            filter: AudioFilter::new(44_100.0),
         }
     }
 
@@ -225,8 +270,8 @@ impl APU {
                 self.pulse1.tick_timer();
                 self.pulse2.tick_timer();
                 self.noise.tick_timer();
-                self.dmc.tick_timer();
             }
+            self.dmc.tick_timer();
         }
 
         for _ in 0..cycles {
@@ -236,7 +281,8 @@ impl APU {
         self.sample_acc += cycles as f32;
         while self.sample_acc >= self.cycles_per_sample {
             self.sample_acc -= self.cycles_per_sample;
-            let s = self.sample();
+            let raw = self.sample();
+            let s = self.filter.process(raw);
             self.sample_buffer.push(s);
         }
     }
@@ -328,5 +374,13 @@ impl APU {
 
     pub fn drain_samples(&mut self) -> Vec<f32> {
         std::mem::take(&mut self.sample_buffer)
+    }
+
+    pub fn set_sample_rate(&mut self, sample_rate: u32) {
+        let sample_rate = sample_rate.max(1) as f32;
+        self.cycles_per_sample = 1_789_773.0 / sample_rate;
+        self.sample_acc = 0.0;
+        self.sample_buffer.clear();
+        self.filter = AudioFilter::new(sample_rate);
     }
 }

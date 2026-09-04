@@ -56,4 +56,12 @@ impl Emulator {
         self.cpu.reset_ppu();
         self.cpu.reset_apu();
     }
+
+    pub fn drain_audio_samples(&mut self) -> Vec<f32> {
+        self.cpu.drain_audio_samples()
+    }
+
+    pub fn set_audio_sample_rate(&mut self, sample_rate: u32) {
+        self.cpu.set_audio_sample_rate(sample_rate);
+    }
 }
