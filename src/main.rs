@@ -188,6 +188,12 @@ impl ApplicationHandler for App {
                         self.emu.reset();
                         self.notify("RESET");
                     }
+                    KeyCode::KeyT if pressed => {
+                        // save state
+                    }
+                    KeyCode::KeyY if pressed => {
+                        // load state
+                    }
                     _ => {}
                 }
             }

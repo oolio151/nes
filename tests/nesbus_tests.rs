@@ -1,11 +1,16 @@
 use oolio151_nes::cpu::{Bus, NesBus};
 use oolio151_nes::cpu::mapper::Nrom;
+use oolio151_nes::cartridge::Mirroring;
 
 fn make_test_bus() -> NesBus {
     // Minimal 16KB NROM cartridge, doesn't matter what's in it for RAM/PPU tests.
     let prg_rom = vec![0u8; 0x4000];
     let chr_rom = vec![0u8; 0x2000];
-    NesBus::new(Box::new(Nrom::new(prg_rom, chr_rom)))
+    NesBus::new(
+        Box::new(Nrom::new(prg_rom, chr_rom.clone())),
+        Mirroring::Horizontal,
+        chr_rom,
+    )
 }
 
 #[test]
@@ -38,12 +43,19 @@ fn cpu_ram_high_offset_mirrors_correctly() {
 fn ppu_registers_mirror_every_eight_bytes() {
     let mut bus = make_test_bus();
 
-    // PPU is a stub right now (read_register/write_register both no-op /
-    // return 0), so this test only confirms the ADDRESS MASKING routes
-    // correctly, not real PPU register behavior — that's Phase 3.
-    // Once PPU has real per-register state, extend this to verify actual
-    // register values propagate correctly across the mirror too.
-    for base in (0x2000..0x3FFF).step_by(8) {
-        assert_eq!(bus.read(base), bus.read(0x2000));
+    // OAMADDR/OAMDATA let us verify both writes and reads through aliases.
+    for base in (0x2000..=0x3FF8).step_by(8) {
+        let value = ((base - 0x2000) / 8) as u8;
+        bus.write(0x2003, 0x20);
+        bus.write(0x2004, !value);
+
+        bus.write(base + 3, 0x20);
+        bus.write(base + 4, value);
+        bus.write(0x2003, 0x20);
+        assert_eq!(bus.read(0x2004), value, "write alias at {base:#06x}");
+
+        bus.write(0x2004, !value);
+        bus.write(0x2003, 0x20);
+        assert_eq!(bus.read(base + 4), !value, "read alias at {base:#06x}");
     }
 }
