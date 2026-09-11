@@ -13,7 +13,7 @@ Emulator is still pretty new, so loading games is done via terminal, simply ente
 - Y - Load State
 
 ## Development
-Currently the emulator is functional with [NROM/mapper 0 games](https://nescartdb.com/search/advanced?ines=0&rows=400&rfa=1+2+11+3+9+20+41+53+10). More mappers will come soon to expand the game library.
+Currently the emulator is functional with [NROM/mapper 0 games](https://nescartdb.com/search/advanced?ines=0&rows=400&rfa=1+2+11+3+9+20+41+53+10). More mappers will come soon to expand the game library. This emulator is meant to emulate an NTSC-region NES.
 
 
 
