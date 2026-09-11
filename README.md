@@ -18,4 +18,4 @@ Currently the emulator is functional with NROM/mapper 0 games (such as Super Mar
 
 ## Other info
 cpu tests are from [SingleStepTests/65x02](https://github.com/SingleStepTests/65x02)<br>
-passed 75/141 tests from [100thCoin/AccuracyCoin](https://github.com/100thCoin/AccuracyCoin)
+passed 75/141 tests from [100thCoin/AccuracyCoin](https://github.com/100thCoin/AccuracyCoin) (better than many official Nintendo emulators btw!)
