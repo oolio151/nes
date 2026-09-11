@@ -108,6 +108,29 @@ impl AudioFilter {
         self.lp14k_prev_out += self.lp14k_alpha * (hp440 - self.lp14k_prev_out);
         self.lp14k_prev_out
     }
+
+    pub fn save_state(&self) -> crate::savestate::AudioFilterState {
+        crate::savestate::AudioFilterState {
+            hp90_alpha: self.hp90_alpha,
+            hp440_alpha: self.hp440_alpha,
+            lp14k_alpha: self.lp14k_alpha,
+            hp90_prev_in: self.hp90_prev_in,
+            hp90_prev_out: self.hp90_prev_out,
+            hp440_prev_in: self.hp440_prev_in,
+            hp440_prev_out: self.hp440_prev_out,
+            lp14k_prev_out: self.lp14k_prev_out,
+        }
+    }
+    pub fn load_state(&mut self, state: &crate::savestate::AudioFilterState) {
+        self.hp90_alpha = state.hp90_alpha;
+        self.hp440_alpha = state.hp440_alpha;
+        self.lp14k_alpha = state.lp14k_alpha;
+        self.hp90_prev_in = state.hp90_prev_in;
+        self.hp90_prev_out = state.hp90_prev_out;
+        self.hp440_prev_in = state.hp440_prev_in;
+        self.hp440_prev_out = state.hp440_prev_out;
+        self.lp14k_prev_out = state.lp14k_prev_out;
+    }
 }
 
 impl APU {
@@ -382,5 +405,47 @@ impl APU {
         self.sample_acc = 0.0;
         self.sample_buffer.clear();
         self.filter = AudioFilter::new(sample_rate);
+    }
+
+    pub fn save_state(&self) -> crate::savestate::ApuState {
+        crate::savestate::ApuState {
+            pulse1: self.pulse1.save_state(),
+            pulse2: self.pulse2.save_state(),
+            cycle_parity: self.cycle_parity,
+            triangle: self.triangle.save_state(),
+            noise: self.noise.save_state(),
+            dmc: self.dmc.save_state(),
+            status: self.status,
+            frame_counter: self.frame_counter,
+            io_latch: self.io_latch.get(),
+            frame_cycle: self.frame_cycle,
+            frame_step: self.frame_step,
+            mode_5step: self.mode_5step,
+            irq_inhibit: self.irq_inhibit,
+            frame_irq_pending: self.frame_irq_pending.get(),
+            sample_acc: self.sample_acc,
+            cycles_per_sample: self.cycles_per_sample,
+            filter: self.filter.save_state(),
+        }
+    }
+    pub fn load_state(&mut self, state: &crate::savestate::ApuState) {
+        self.pulse1.load_state(&state.pulse1);
+        self.pulse2.load_state(&state.pulse2);
+        self.cycle_parity = state.cycle_parity;
+        self.triangle.load_state(&state.triangle);
+        self.noise.load_state(&state.noise);
+        self.dmc.load_state(&state.dmc);
+        self.status = state.status;
+        self.frame_counter = state.frame_counter;
+        self.io_latch.set(state.io_latch);
+        self.frame_cycle = state.frame_cycle;
+        self.frame_step = state.frame_step;
+        self.mode_5step = state.mode_5step;
+        self.irq_inhibit = state.irq_inhibit;
+        self.frame_irq_pending.set(state.frame_irq_pending);
+        self.sample_acc = state.sample_acc;
+        self.cycles_per_sample = state.cycles_per_sample;
+        self.filter.load_state(&state.filter);
+        self.sample_buffer.clear();
     }
 }

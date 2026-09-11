@@ -19,6 +19,13 @@ pub enum Flag {
 }
 
 pub trait Bus {
+    // just to cover my ass
+    fn save_state(&self) -> Result<crate::savestate::BusState, String> {
+        Err("savestates unsupported by this bus".into())
+    }
+    fn load_state(&mut self, _state: &crate::savestate::BusState) -> Result<(), String> {
+        Err("savestates unsupported by this bus".into())
+    }
     fn read(&self, address: u16) -> u8;
     fn write(&mut self, address: u16, data: u8);
     fn tick_ppu(&mut self) -> bool;
@@ -86,6 +93,28 @@ pub struct NesBus {
 }
 
 impl Bus for NesBus {
+    fn save_state(&self) -> Result<crate::savestate::BusState, String> {
+        Ok(crate::savestate::BusState {
+            cpu_ram: self.cpu_ram,
+            dma_pending: self.dma_pending,
+            ppu: self.ppu.save_state(),
+            apu: self.apu.save_state(),
+            mapper: self.cartridge.save_state()?,
+            controller1: self.controller1.save_state(),
+            controller2: self.controller2.save_state(),
+        })
+    }
+    fn load_state(&mut self, state: &crate::savestate::BusState) -> Result<(), String> {
+        // mapper must reject unsupported states before modifying itself.
+        self.cartridge.load_state(&state.mapper)?;
+        self.cpu_ram = state.cpu_ram;
+        self.dma_pending = state.dma_pending;
+        self.ppu.load_state(&state.ppu);
+        self.apu.load_state(&state.apu);
+        self.controller1.load_state(&state.controller1);
+        self.controller2.load_state(&state.controller2);
+        Ok(())
+    }
     fn read(&self, address: u16) -> u8 {
         match address {
             0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize],
@@ -402,5 +431,33 @@ impl CPU {
 
     pub fn set_audio_sample_rate(&mut self, sample_rate: u32) {
         self.bus.set_audio_sample_rate(sample_rate);
+    }
+
+    pub fn save_state(&self) -> crate::savestate::CpuState {
+        crate::savestate::CpuState {
+            a: self.a,
+            x: self.x,
+            y: self.y,
+            pc: self.pc,
+            s: self.s,
+            p: self.p,
+            cycle_count: self.cycle_count,
+        }
+    }
+    pub fn load_state(&mut self, state: &crate::savestate::CpuState) {
+        self.a = state.a;
+        self.x = state.x;
+        self.y = state.y;
+        self.pc = state.pc;
+        self.s = state.s;
+        self.p = state.p;
+        self.cycle_count = state.cycle_count;
+    }
+
+    pub(crate) fn save_bus_state(&self) -> Result<crate::savestate::BusState, String> {
+        self.bus.save_state()
+    }
+    pub(crate) fn load_bus_state(&mut self, state: &crate::savestate::BusState) -> Result<(), String> {
+        self.bus.load_state(state)
     }
 }

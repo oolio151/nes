@@ -165,7 +165,7 @@ impl ApplicationHandler for App {
             }
 
             WindowEvent::KeyboardInput {
-                event: KeyEvent { physical_key: PhysicalKey::Code(code), state, .. },
+                event: KeyEvent { physical_key: PhysicalKey::Code(code), state, repeat, .. },
                 ..
             } => {
                 let pressed = state == ElementState::Pressed;
@@ -188,11 +188,21 @@ impl ApplicationHandler for App {
                         self.emu.reset();
                         self.notify("RESET");
                     }
-                    KeyCode::KeyT if pressed => {
-                        // save state
+                    KeyCode::KeyT if pressed && !repeat => {
+                        match oolio151_nes::savestate::save_file(&self.emu) {
+                            Ok(()) => self.notify("STATE SAVED"),
+                            Err(error) => { eprintln!("Save failed: {error}"); self.notify("SAVE FAILED"); }
+                        }
                     }
-                    KeyCode::KeyY if pressed => {
-                        // load state
+                    KeyCode::KeyY if pressed && !repeat => {
+                        match oolio151_nes::savestate::load_file(&mut self.emu) {
+                            Ok(()) => {
+                                self.audio_buffer.lock().unwrap().clear();
+                                self.last_frame = Instant::now();
+                                self.notify("STATE LOADED");
+                            }
+                            Err(error) => { eprintln!("Load failed: {error}"); self.notify("LOAD FAILED"); }
+                        }
                     }
                     _ => {}
                 }

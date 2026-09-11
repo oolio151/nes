@@ -108,4 +108,35 @@ impl TriangleChannel {
     pub fn length_counter_active(&self) -> bool {
         self.length_counter > 0
     }
+
+    pub fn save_state(&self) -> crate::savestate::TriangleChannelState {
+        crate::savestate::TriangleChannelState {
+            linear_ctrl: self.linear_ctrl,
+            timer_lo: self.timer_lo,
+            length_timer_hi: self.length_timer_hi,
+            timer_period: self.timer_period,
+            timer_counter: self.timer_counter,
+            sequencer_pos: self.sequencer_pos,
+            length_counter: self.length_counter,
+            control_flag: self.control_flag,
+            linear_counter: self.linear_counter,
+            linear_reload_value: self.linear_reload_value,
+            linear_reload_flag: self.linear_reload_flag,
+            enabled: self.enabled,
+        }
+    }
+    pub fn load_state(&mut self, state: &crate::savestate::TriangleChannelState) {
+        self.linear_ctrl = state.linear_ctrl;
+        self.timer_lo = state.timer_lo;
+        self.length_timer_hi = state.length_timer_hi;
+        self.timer_period = state.timer_period;
+        self.timer_counter = state.timer_counter;
+        self.sequencer_pos = state.sequencer_pos;
+        self.length_counter = state.length_counter;
+        self.control_flag = state.control_flag;
+        self.linear_counter = state.linear_counter;
+        self.linear_reload_value = state.linear_reload_value;
+        self.linear_reload_flag = state.linear_reload_flag;
+        self.enabled = state.enabled;
+    }
 }

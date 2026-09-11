@@ -466,5 +466,111 @@ impl PPU {
         self.nmi_pending = false;
 
     }
-    
+
+    pub fn save_state(&self) -> crate::savestate::PpuState {
+        crate::savestate::PpuState {
+            // bro ngl llms saved me like a half hour just typing in variable names for implementing savestates
+            // not letting them do anything important here tho lmao (except audio and video output)
+            nmi_enable: self.nmi_enable,
+            sprites_8x16: self.sprites_8x16,
+            bg_pattern_table_addr: self.bg_pattern_table_addr,
+            sprite_pattern_table_addr: self.sprite_pattern_table_addr,
+            vram_addr_inc: self.vram_addr_inc,
+            emphasize_blue: self.emphasize_blue,
+            emphasize_green: self.emphasize_green,
+            emphasize_red: self.emphasize_red,
+            sprite_rendering: self.sprite_rendering,
+            bg_rendering: self.bg_rendering,
+            show_sprites_in_leftmost: self.show_sprites_in_leftmost,
+            show_bg_in_leftmost: self.show_bg_in_leftmost,
+            grayscale: self.grayscale,
+            vblank_flag: self.vblank_flag.get(),
+            sprite0_hit: self.sprite0_hit.get(),
+            sprite_overflow: self.sprite_overflow.get(),
+            oam_addr: self.oam_addr,
+            oam: self.oam,
+            oam2: self.oam2,
+            v: self.v.get(),
+            t: self.t,
+            x: self.x,
+            w: self.w.get(),
+            read_buffer: self.read_buffer.get(),
+            io_latch: self.io_latch.get(),
+            scanline: self.scanline,
+            dot: self.dot,
+            odd_frame: self.odd_frame,
+            nmi_pending: self.nmi_pending,
+            vram: self.vram,
+            palette_ram: self.palette_ram,
+            bg_shift_lo: self.bg_shift_lo,
+            bg_shift_hi: self.bg_shift_hi,
+            attr_shift_lo: self.attr_shift_lo,
+            attr_shift_hi: self.attr_shift_hi,
+            attr_latch_lo: self.attr_latch_lo,
+            attr_latch_hi: self.attr_latch_hi,
+            nt_latch: self.nt_latch,
+            at_latch: self.at_latch,
+            bg_lo_latch: self.bg_lo_latch,
+            bg_hi_latch: self.bg_hi_latch,
+            sprite_pattern_lo: self.sprite_pattern_lo,
+            sprite_pattern_hi: self.sprite_pattern_hi,
+            sprite_attr: self.sprite_attr,
+            sprite_x: self.sprite_x,
+            sprite_zero_next: self.sprite_zero_next,
+            sprite_zero_current: self.sprite_zero_current,
+            framebuffer: self.framebuffer.to_vec(),
+            frame_complete_flag: self.frame_complete_flag,
+        }
+    }
+    pub fn load_state(&mut self, state: &crate::savestate::PpuState) {
+        self.nmi_enable = state.nmi_enable;
+        self.sprites_8x16 = state.sprites_8x16;
+        self.bg_pattern_table_addr = state.bg_pattern_table_addr;
+        self.sprite_pattern_table_addr = state.sprite_pattern_table_addr;
+        self.vram_addr_inc = state.vram_addr_inc;
+        self.emphasize_blue = state.emphasize_blue;
+        self.emphasize_green = state.emphasize_green;
+        self.emphasize_red = state.emphasize_red;
+        self.sprite_rendering = state.sprite_rendering;
+        self.bg_rendering = state.bg_rendering;
+        self.show_sprites_in_leftmost = state.show_sprites_in_leftmost;
+        self.show_bg_in_leftmost = state.show_bg_in_leftmost;
+        self.grayscale = state.grayscale;
+        self.vblank_flag.set(state.vblank_flag);
+        self.sprite0_hit.set(state.sprite0_hit);
+        self.sprite_overflow.set(state.sprite_overflow);
+        self.oam_addr = state.oam_addr;
+        self.oam = state.oam;
+        self.oam2 = state.oam2;
+        self.v.set(state.v);
+        self.t = state.t;
+        self.x = state.x;
+        self.w.set(state.w);
+        self.read_buffer.set(state.read_buffer);
+        self.io_latch.set(state.io_latch);
+        self.scanline = state.scanline;
+        self.dot = state.dot;
+        self.odd_frame = state.odd_frame;
+        self.nmi_pending = state.nmi_pending;
+        self.vram = state.vram;
+        self.palette_ram = state.palette_ram;
+        self.bg_shift_lo = state.bg_shift_lo;
+        self.bg_shift_hi = state.bg_shift_hi;
+        self.attr_shift_lo = state.attr_shift_lo;
+        self.attr_shift_hi = state.attr_shift_hi;
+        self.attr_latch_lo = state.attr_latch_lo;
+        self.attr_latch_hi = state.attr_latch_hi;
+        self.nt_latch = state.nt_latch;
+        self.at_latch = state.at_latch;
+        self.bg_lo_latch = state.bg_lo_latch;
+        self.bg_hi_latch = state.bg_hi_latch;
+        self.sprite_pattern_lo = state.sprite_pattern_lo;
+        self.sprite_pattern_hi = state.sprite_pattern_hi;
+        self.sprite_attr = state.sprite_attr;
+        self.sprite_x = state.sprite_x;
+        self.sprite_zero_next = state.sprite_zero_next;
+        self.sprite_zero_current = state.sprite_zero_current;
+        self.framebuffer.copy_from_slice(&state.framebuffer);
+        self.frame_complete_flag = state.frame_complete_flag;
+    }
 }

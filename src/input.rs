@@ -47,4 +47,17 @@ impl ControllerState {
             bit
         }
     }
+
+    pub fn save_state(&self) -> crate::savestate::ControllerSnapshot {
+        crate::savestate::ControllerSnapshot {
+            button_state: self.button_state.get(),
+            shift_reg: self.shift_reg.get(),
+            strobe: self.strobe.get(),
+        }
+    }
+    pub fn load_state(&mut self, state: &crate::savestate::ControllerSnapshot) {
+        self.button_state.set(state.button_state);
+        self.shift_reg.set(state.shift_reg);
+        self.strobe.set(state.strobe);
+    }
 }

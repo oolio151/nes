@@ -1,4 +1,10 @@
 pub trait Mapper {
+    fn save_state(&self) -> Result<crate::savestate::MapperState, String> {
+        Err("savestates unsupported by this mapper".into())
+    }
+    fn load_state(&mut self, _state: &crate::savestate::MapperState) -> Result<(), String> {
+        Err("savestates unsupported by this mapper".into())
+    }
     fn read(&self, address: u16) -> u8;
     fn write(&mut self, address: u16, data: u8);
 
@@ -24,6 +30,14 @@ impl Nrom {
 }
 
 impl Mapper for Nrom {
+    fn save_state(&self) -> Result<crate::savestate::MapperState, String> {
+        Ok(crate::savestate::MapperState::Nrom { prg_ram: self.prg_ram })
+    }
+    fn load_state(&mut self, state: &crate::savestate::MapperState) -> Result<(), String> {
+        let crate::savestate::MapperState::Nrom { prg_ram } = state;
+        self.prg_ram = *prg_ram;
+        Ok(())
+    }
     fn read(&self, address: u16) -> u8 {
         match address {
             0x6000..=0x7FFF => self.prg_ram[(address - 0x6000) as usize],

@@ -155,4 +155,43 @@ impl DmcChannel {
     pub fn output(&self) -> u8 {
         self.output_level
     }
+
+    pub fn save_state(&self) -> crate::savestate::DmcChannelState {
+        crate::savestate::DmcChannelState {
+            irq_enable: self.irq_enable,
+            loop_flag: self.loop_flag,
+            rate_index: self.rate_index,
+            sample_addr_reg: self.sample_addr_reg,
+            sample_length_reg: self.sample_length_reg,
+            timer_period: self.timer_period,
+            timer_counter: self.timer_counter,
+            current_addr: self.current_addr,
+            bytes_remaining: self.bytes_remaining,
+            sample_buffer: self.sample_buffer,
+            shift_register: self.shift_register,
+            bits_remaining: self.bits_remaining,
+            output_level: self.output_level,
+            silence_flag: self.silence_flag,
+            enabled: self.enabled,
+            irq_pending: self.irq_pending.get(),
+        }
+    }
+    pub fn load_state(&mut self, state: &crate::savestate::DmcChannelState) {
+        self.irq_enable = state.irq_enable;
+        self.loop_flag = state.loop_flag;
+        self.rate_index = state.rate_index;
+        self.sample_addr_reg = state.sample_addr_reg;
+        self.sample_length_reg = state.sample_length_reg;
+        self.timer_period = state.timer_period;
+        self.timer_counter = state.timer_counter;
+        self.current_addr = state.current_addr;
+        self.bytes_remaining = state.bytes_remaining;
+        self.sample_buffer = state.sample_buffer;
+        self.shift_register = state.shift_register;
+        self.bits_remaining = state.bits_remaining;
+        self.output_level = state.output_level;
+        self.silence_flag = state.silence_flag;
+        self.enabled = state.enabled;
+        self.irq_pending.set(state.irq_pending);
+    }
 }

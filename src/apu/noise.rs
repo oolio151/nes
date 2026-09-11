@@ -129,4 +129,41 @@ impl NoiseChannel {
     pub fn length_counter_active(&self) -> bool {
         self.length_counter > 0
     }
+
+    pub fn save_state(&self) -> crate::savestate::NoiseChannelState {
+        crate::savestate::NoiseChannelState {
+            env: self.env,
+            mode_period: self.mode_period,
+            length: self.length,
+            timer_period: self.timer_period,
+            timer_counter: self.timer_counter,
+            shift_reg: self.shift_reg,
+            length_counter: self.length_counter,
+            length_halt: self.length_halt,
+            envelope_start: self.envelope_start,
+            envelope_decay: self.envelope_decay,
+            envelope_counter: self.envelope_counter,
+            constant_volume: self.constant_volume,
+            volume_or_period: self.volume_or_period,
+            mode_short: self.mode_short,
+            enabled: self.enabled,
+        }
+    }
+    pub fn load_state(&mut self, state: &crate::savestate::NoiseChannelState) {
+        self.env = state.env;
+        self.mode_period = state.mode_period;
+        self.length = state.length;
+        self.timer_period = state.timer_period;
+        self.timer_counter = state.timer_counter;
+        self.shift_reg = state.shift_reg;
+        self.length_counter = state.length_counter;
+        self.length_halt = state.length_halt;
+        self.envelope_start = state.envelope_start;
+        self.envelope_decay = state.envelope_decay;
+        self.envelope_counter = state.envelope_counter;
+        self.constant_volume = state.constant_volume;
+        self.volume_or_period = state.volume_or_period;
+        self.mode_short = state.mode_short;
+        self.enabled = state.enabled;
+    }
 }

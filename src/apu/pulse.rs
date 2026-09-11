@@ -209,4 +209,55 @@ impl PulseChannel {
     pub fn length_counter_active(&self) -> bool {
         self.length_counter > 0
     }
+
+    pub fn save_state(&self) -> crate::savestate::PulseChannelState {
+        crate::savestate::PulseChannelState {
+            duty_env: self.duty_env,
+            sweep: self.sweep,
+            timer_lo: self.timer_lo,
+            length_timer_hi: self.length_timer_hi,
+            timer_period: self.timer_period,
+            timer_counter: self.timer_counter,
+            sequencer_pos: self.sequencer_pos,
+            length_counter: self.length_counter,
+            length_halt: self.length_halt,
+            envelope_start: self.envelope_start,
+            envelope_decay: self.envelope_decay,
+            envelope_counter: self.envelope_counter,
+            constant_volume: self.constant_volume,
+            volume_or_period: self.volume_or_period,
+            sweep_enabled: self.sweep_enabled,
+            sweep_period: self.sweep_period,
+            sweep_negate: self.sweep_negate,
+            sweep_shift: self.sweep_shift,
+            sweep_counter: self.sweep_counter,
+            sweep_reload: self.sweep_reload,
+            enabled: self.enabled,
+            is_channel2: self.is_channel2,
+        }
+    }
+    pub fn load_state(&mut self, state: &crate::savestate::PulseChannelState) {
+        self.duty_env = state.duty_env;
+        self.sweep = state.sweep;
+        self.timer_lo = state.timer_lo;
+        self.length_timer_hi = state.length_timer_hi;
+        self.timer_period = state.timer_period;
+        self.timer_counter = state.timer_counter;
+        self.sequencer_pos = state.sequencer_pos;
+        self.length_counter = state.length_counter;
+        self.length_halt = state.length_halt;
+        self.envelope_start = state.envelope_start;
+        self.envelope_decay = state.envelope_decay;
+        self.envelope_counter = state.envelope_counter;
+        self.constant_volume = state.constant_volume;
+        self.volume_or_period = state.volume_or_period;
+        self.sweep_enabled = state.sweep_enabled;
+        self.sweep_period = state.sweep_period;
+        self.sweep_negate = state.sweep_negate;
+        self.sweep_shift = state.sweep_shift;
+        self.sweep_counter = state.sweep_counter;
+        self.sweep_reload = state.sweep_reload;
+        self.enabled = state.enabled;
+        self.is_channel2 = state.is_channel2;
+    }
 }
