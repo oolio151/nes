@@ -3,7 +3,6 @@ pub mod ops;
 pub mod mapper;
 
 use crate::ppu::{PPU};
-use crate::cartridge::Mirroring;
 use mapper::*;
 use crate::input::ControllerState;
 use crate::apu::APU;
@@ -118,7 +117,7 @@ impl Bus for NesBus {
     fn read(&self, address: u16) -> u8 {
         match address {
             0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize],
-            0x2000..=0x3FFF => self.ppu.read_register((address & 0x0007) as u8),
+            0x2000..=0x3FFF => self.ppu.read_register((address & 0x0007) as u8, self.cartridge.as_ref()),
             0x4016 => self.controller1.read(),
             0x4017 => self.controller2.read(),
             0x4000..=0x4015 => self.read_apu_io(address),
@@ -130,7 +129,7 @@ impl Bus for NesBus {
     fn write(&mut self, address: u16, data: u8) {
         match address {
             0x0000..=0x1FFF => self.cpu_ram[(address & 0x07FF) as usize] = data,
-            0x2000..=0x3FFF => self.ppu.write_register((address & 0x0007) as u8, data),
+            0x2000..=0x3FFF => self.ppu.write_register((address & 0x0007) as u8, data, self.cartridge.as_mut()),
             0x4014 => self.dma_pending = Some(data),
             0x4016 => {
                 self.controller1.write_strobe(data);
@@ -143,7 +142,7 @@ impl Bus for NesBus {
     }
 
     fn tick_ppu(&mut self) -> bool {
-        self.ppu.tick();
+        self.ppu.tick(self.cartridge.as_ref());
         self.ppu.take_nmi()
     }
 
@@ -159,7 +158,7 @@ impl Bus for NesBus {
         let base = (page as u16) << 8;
         for i in 0..256u16 {
             let byte = self.read(base + i);
-            self.ppu.write_register(4, byte); // OAMDATA
+            self.ppu.write_register(4, byte, self.cartridge.as_mut()); // OAMDATA
         }
 
         514 
@@ -209,10 +208,10 @@ impl Bus for NesBus {
 
 impl NesBus {
 
-    pub fn new(cartridge: Box<dyn Mapper>, mirroring: Mirroring, chr_rom: Vec<u8>) -> Self {
+    pub fn new(cartridge: Box<dyn Mapper>) -> Self {
         Self {
             cpu_ram: [0; 0x0800],
-            ppu: PPU::new(mirroring, chr_rom),
+            ppu: PPU::new(),
             apu: APU::new(),
             cartridge,
             dma_pending: None, 

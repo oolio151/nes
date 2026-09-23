@@ -1,8 +1,9 @@
 use super::PPU;
+use crate::cpu::mapper::Mapper;
 
 impl PPU {
     // takes one of the sprites from oam2 and prepares it to be drawn on next scanline
-    fn load_sprite_from_secondary_oam(&mut self, sprite_num: usize) {
+    fn load_sprite_from_secondary_oam(&mut self, sprite_num: usize, mapper: &dyn Mapper) {
         let base = sprite_num * 4;
         let y = self.oam2[base];
         let tile = self.oam2[base + 1];
@@ -40,8 +41,8 @@ impl PPU {
 
         let row_in_tile = row % 8;
         let tile_addr = table_base + (tile_index as u16 * 16);
-        let mut lo = self.read_vram(tile_addr + row_in_tile);
-        let mut hi = self.read_vram(tile_addr + row_in_tile + 8);
+        let mut lo = self.read_vram(tile_addr + row_in_tile, mapper);
+        let mut hi = self.read_vram(tile_addr + row_in_tile + 8, mapper);
 
         if flip_h {
             lo = lo.reverse_bits();
@@ -53,14 +54,14 @@ impl PPU {
     }
 
     // on dots 257-320, dispatches sprite tile loading, one load per 8-dot window.
-    pub fn sprite_fetch_cycle(&mut self, dot: u16) {
+    pub fn sprite_fetch_cycle(&mut self, dot: u16, mapper: &dyn Mapper) {
         let offset = dot - 257;
         let sprite_num = (offset / 8) as usize;
 
         // Load once per sprite, at the end of its 8-dot window (matches when
         // pattern-high would be ready in the real 2-dot-per-fetch schedule).
         if offset % 8 == 7 && sprite_num < 8 {
-            self.load_sprite_from_secondary_oam(sprite_num);
+            self.load_sprite_from_secondary_oam(sprite_num, mapper);
         }
     }
 

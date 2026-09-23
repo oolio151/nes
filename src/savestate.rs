@@ -5,7 +5,7 @@ use std::{io::{Read, Write}, path::PathBuf};
 
 pub type SaveError = String;
 const MAGIC: &[u8; 8] = b"NESSTATE";
-const VERSION: u32 = 2;
+const VERSION: u32 = 3;
 const MAX_FILE_SIZE: u64 = 1024 * 1024;
 const HEADER_SIZE: usize = 8 + 4 + 32 + 32;
 
@@ -76,7 +76,7 @@ pub struct PpuState {
     pub(crate) odd_frame: bool,
     pub(crate) nmi_pending: bool,
     #[serde(with = "serde_big_array::BigArray")]
-    pub(crate) vram: [u8; 2048],
+    pub(crate) vram: [u8; 4096],
     pub(crate) palette_ram: [u8; 32],
     pub(crate) bg_shift_lo: u16,
     pub(crate) bg_shift_hi: u16,
@@ -214,7 +214,8 @@ pub struct AudioFilterState {
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum MapperState {
-    Nrom { #[serde(with = "serde_big_array::BigArray")] prg_ram: [u8; 0x2000] },
+    Nrom { #[serde(with = "serde_big_array::BigArray")] prg_ram: [u8; 0x2000], chr_ram: Vec<u8> },
+    Uxrom { selected_bank: u8, #[serde(with = "serde_big_array::BigArray")] chr_ram: [u8; 0x2000] },
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

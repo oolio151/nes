@@ -1,4 +1,5 @@
 use super::PPU;
+use crate::cpu::mapper::Mapper;
 use super::palette::NES_PALETTE;
 
 impl PPU {
@@ -31,7 +32,7 @@ impl PPU {
 
         let s_bit: u16 = if is_sprite { 1 } else { 0 };
         let palette_addr = 0x3F00 | (s_bit << 4) | ((palette_select as u16) << 2) | final_pixel as u16;
-        let color_index = self.read_vram(palette_addr) & 0x3F;
+        let color_index = self.palette_ram[self.mirror_palette(palette_addr)] & 0x3F;
         let color = NES_PALETTE[color_index as usize];
 
         let x = (dot - 4) as usize;
@@ -78,7 +79,7 @@ impl PPU {
         (final_pixel, is_sprite, palette_select, hit)
     }
 
-    pub fn run_render_cycle(&mut self) {
+    pub fn run_render_cycle(&mut self, mapper: &dyn Mapper) {
         if !(self.bg_rendering || self.sprite_rendering) {
             return;
         }
@@ -103,16 +104,16 @@ impl PPU {
 
             match (dot - 1) % 8 {
                 0 => {
-                    self.nt_latch = self.fetch_nametable_byte();
+                    self.nt_latch = self.fetch_nametable_byte(mapper);
                 }
                 2 => {
-                    self.at_latch = self.fetch_attribute_byte();
+                    self.at_latch = self.fetch_attribute_byte(mapper);
                 }
                 4 => {
-                    self.bg_lo_latch = self.fetch_pattern_low();
+                    self.bg_lo_latch = self.fetch_pattern_low(mapper);
                 }
                 6 => {
-                    self.bg_hi_latch = self.fetch_pattern_high();
+                    self.bg_hi_latch = self.fetch_pattern_high(mapper);
                 }
                 7 => {
                     self.bg_shift_lo = (self.bg_shift_lo & 0xFF00) | self.bg_lo_latch as u16;
@@ -140,7 +141,7 @@ impl PPU {
 
         // sprite tile fetches for next scanline dots 257-320
         if dot >= 257 && dot <= 320 {
-            self.sprite_fetch_cycle(dot);
+            self.sprite_fetch_cycle(dot, mapper);
         }
 
         // --- pre-render only, dots 280-304: vertical scroll reload ---

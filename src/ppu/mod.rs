@@ -1,5 +1,6 @@
 use std::cell::Cell;
 use crate::cartridge::Mirroring;
+use crate::cpu::mapper::Mapper;
 
 pub mod palette;
 pub mod rendering;
@@ -82,10 +83,8 @@ pub struct PPU {
     dot: u16, // 0 through 340
     odd_frame: bool, // weird behavior shit
     nmi_pending: bool,
-    vram: [u8; 2048],
+    vram: [u8; 4096],
     palette_ram: [u8; 32],
-    mirroring: Mirroring,
-    chr_rom: Vec<u8>,
 
     // background pipeline shit
     bg_shift_lo: u16,
@@ -117,7 +116,7 @@ pub struct PPU {
 }
 
 impl PPU {
-    pub fn new(mirroring: Mirroring, chr_rom: Vec<u8>) -> Self {
+    pub fn new() -> Self {
         Self {
             nmi_enable: false,
             sprites_8x16: false,
@@ -157,10 +156,8 @@ impl PPU {
 
             nmi_pending: false,
 
-            vram: [0; 2048],
+            vram: [0; 4096],
             palette_ram: [0; 32],
-            mirroring, 
-            chr_rom,
 
             bg_shift_lo: 0,
             bg_shift_hi: 0,
@@ -206,7 +203,7 @@ impl PPU {
         }
     }
 
-    pub fn read_register(&self, register: u8) -> u8 {
+    pub fn read_register(&self, register: u8, mapper: &dyn Mapper) -> u8 {
         let r = Self::index_to_register(register);
 
         match r {
@@ -235,11 +232,11 @@ impl PPU {
                 let ret;
 
                 if self.v.get() & 0x3F00 == 0x3F00 {
-                    ret = self.read_vram(self.v.get());
-                    self.read_buffer.set(self.read_vram(self.v.get().wrapping_sub(0x1000)));
+                    ret = self.read_vram(self.v.get(), mapper);
+                    self.read_buffer.set(self.read_vram(self.v.get().wrapping_sub(0x1000), mapper));
                 } else {
                     ret = self.read_buffer.get();
-                    self.read_buffer.set(self.read_vram(self.v.get()));
+                    self.read_buffer.set(self.read_vram(self.v.get(), mapper));
                 }
                 self.v.set(self.v.get().wrapping_add(self.vram_addr_inc as u16));
 
@@ -254,7 +251,7 @@ impl PPU {
 
     }
 
-    pub fn write_register(&mut self, reg: u8, data: u8) {
+    pub fn write_register(&mut self, reg: u8, data: u8, mapper: &mut dyn Mapper) {
         let r = Self::index_to_register(reg);
 
         match r {
@@ -326,7 +323,7 @@ impl PPU {
             }
 
             PPURegister::PPUDATA => {
-                self.write_vram(self.v.get(), data);
+                self.write_vram(self.v.get(), data, mapper);
                 self.v.set(self.v.get().wrapping_add(self.vram_addr_inc as u16));
 
                 self.io_latch.set(data);
@@ -334,7 +331,7 @@ impl PPU {
         }
     }
 
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self, mapper: &dyn Mapper) {
         if self.scanline == 241 && self.dot == 1 {
             self.vblank_flag.set(true);
             self.nmi_pending = self.nmi_enable;
@@ -363,7 +360,7 @@ impl PPU {
                 self.evaluate_sprites();
             }
 
-            self.run_render_cycle();
+            self.run_render_cycle(mapper);
         }
 
         self.dot += 1;
@@ -393,35 +390,37 @@ impl PPU {
         pending
     }
 
-    fn read_vram(&self, addr: u16) -> u8 {
+    fn read_vram(&self, addr: u16, mapper: &dyn Mapper) -> u8 {
         let addr = addr & 0x3FFF; // PPU address space is 14-bit
-        self.notify_mapper(addr);
         match addr {
-                0x0000..=0x1FFF => self.chr_rom[addr as usize], 
-                0x2000..=0x3EFF => self.vram[self.mirror_nametable(addr)],
+                0x0000..=0x1FFF => mapper.ppu_read(addr), 
+                0x2000..=0x3EFF => self.vram[self.mirror_nametable(addr, mapper.mirroring())],
                 0x3F00..=0x3FFF => self.palette_ram[self.mirror_palette(addr)],
                 _ => unreachable!(),
             }
     }
 
-    fn write_vram(&mut self, addr: u16, data: u8) {
+    fn write_vram(&mut self, addr: u16, data: u8, mapper: &mut dyn Mapper) {
         let addr = addr & 0x3FFF;
         match addr {
-            0x0000..=0x1FFF => { /* used for chr ram, replace this once you go past nrom */ }
-            0x2000..=0x3EFF => self.vram[self.mirror_nametable(addr)] = data,
+            0x0000..=0x1FFF => mapper.ppu_write(addr, data),
+            0x2000..=0x3EFF => self.vram[self.mirror_nametable(addr, mapper.mirroring())] = data,
             0x3F00..=0x3FFF => self.palette_ram[self.mirror_palette(addr)] = data,
             _ => unreachable!(),
         }
     }
 
-    fn mirror_nametable(&self, addr: u16) -> usize {
+    fn mirror_nametable(&self, addr: u16, mirroring: Mirroring) -> usize {
         let addr = (addr - 0x2000) % 0x1000;
         let table = addr / 0x0400;
         let offset = addr % 0x0400;
 
-        let physical_table = match self.mirroring {
+        let physical_table = match mirroring {
             Mirroring::Horizontal => table / 2,
-            Mirroring::Vertical   => table % 2, 
+            Mirroring::Vertical   => table % 2,
+            Mirroring::SingleScreenLower => 0,
+            Mirroring::SingleScreenUpper => 1,
+            Mirroring::FourScreen => table, 
         };
 
         (physical_table as usize * 0x0400) + offset as usize
@@ -433,12 +432,6 @@ impl PPU {
             index -= 0x10;
         }
         index as usize
-    }
-
-    fn notify_mapper(&self, addr: u16) {
-        // will implement later when the mappers that use this are made
-        // TODO: wire this through to Mapper::notify_ppu_address once NesBus exposes a path for PPU -> Mapper communication.
-        let _ = addr;
     }
 
     pub fn reset(&mut self) {

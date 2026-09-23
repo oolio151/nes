@@ -4,6 +4,7 @@ use crate::cartridge::load_rom;
 use sha2::{Digest, Sha256};
 pub struct Emulator {
     pub cpu: CPU,
+    pub cartridge_metadata: crate::cartridge::CartridgeMetadata,
     pub(crate) rom_filename: std::ffi::OsString,
     pub(crate) rom_fingerprint: [u8; 32],
 }
@@ -15,10 +16,10 @@ impl Emulator {
         let rom_filename = std::path::Path::new(path).file_name()
             .ok_or("ROM path has no filename")?.to_os_string();
         let rom_fingerprint = Sha256::digest(&bytes).into();
-        let bus = NesBus::new(rom.mapper, rom.mirroring, rom.chr_rom);
+        let bus = NesBus::new(rom.mapper);
         let mut cpu = CPU::new(Box::new(bus));
         cpu.reset();
-        Ok(Self { cpu, rom_filename, rom_fingerprint })
+        Ok(Self { cpu, cartridge_metadata: rom.metadata, rom_filename, rom_fingerprint })
     }
 
     pub fn step(&mut self) -> bool {
