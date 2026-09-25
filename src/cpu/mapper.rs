@@ -142,3 +142,71 @@ impl Mapper for Uxrom {
         Ok(())
     }
 }
+
+pub struct Cnrom {
+    prg_rom: Vec<u8>,
+    chr_rom: Vec<u8>,
+    selected_chr_bank: u8,
+    mirroring: Mirroring,
+    bus_conflicts: BusConflicts,
+}
+
+impl Cnrom {
+    pub fn new(
+        prg_rom: Vec<u8>,
+        chr_rom: Vec<u8>,
+        mirroring: Mirroring,
+        bus_conflicts: BusConflicts,
+    ) -> Result<Self, String> {
+        if !matches!(prg_rom.len(), 0x4000 | 0x8000) {
+            return Err("CNROM requires 16 or 32 KiB PRG ROM".into());
+        }
+        if !matches!(chr_rom.len(), 0x2000 | 0x4000 | 0x8000) {
+            return Err("CNROM requires 8, 16, or 32 KiB CHR ROM".into());
+        }
+        Ok(Self { prg_rom, chr_rom, selected_chr_bank: 0, mirroring, bus_conflicts })
+    }
+}
+
+impl Mapper for Cnrom {
+    fn read(&self, address: u16) -> u8 {
+        match address {
+            0x8000..=0xffff => self.prg_rom[(address as usize - 0x8000) % self.prg_rom.len()],
+            _ => 0, // no program rom
+        }
+    }
+
+    fn write(&mut self, address: u16, data: u8) {
+        if address >= 0x8000 {
+            let effective = match self.bus_conflicts {
+                BusConflicts::None => data,
+                BusConflicts::And => data & self.read(address),
+            };
+            self.selected_chr_bank = effective & 3;
+        }
+    }
+
+    fn ppu_read(&self, address: u16) -> u8 {
+        let bank = self.selected_chr_bank as usize % (self.chr_rom.len() / 0x2000);
+        self.chr_rom[bank * 0x2000 + (address as usize & 0x1fff)]
+    }
+
+    fn ppu_write(&mut self, _address: u16, _data: u8) {}
+
+    fn mirroring(&self) -> Mirroring { self.mirroring }
+
+    fn save_state(&self) -> Result<MapperState, String> {
+        Ok(MapperState::Cnrom { selected_chr_bank: self.selected_chr_bank })
+    }
+
+    fn load_state(&mut self, state: &MapperState) -> Result<(), String> {
+        let MapperState::Cnrom { selected_chr_bank } = state else {
+            return Err("savestate mapper mismatch".into());
+        };
+        if *selected_chr_bank > 3 {
+            return Err("invalid CNROM bank state".into());
+        }
+        self.selected_chr_bank = *selected_chr_bank;
+        Ok(())
+    }
+}
