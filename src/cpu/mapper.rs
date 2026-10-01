@@ -210,3 +210,84 @@ impl Mapper for Cnrom {
         Ok(())
     }
 }
+
+/// Ordinary AxROM: three PRG bank bits, one nametable page bit, fixed CHR RAM.
+pub struct Axrom {
+    prg_rom: Vec<u8>,
+    chr_ram: [u8; 0x2000],
+    selected_prg_bank: u8,
+    nametable_upper: bool,
+    bus_conflicts: BusConflicts,
+}
+
+impl Axrom {
+    pub fn new(prg_rom: Vec<u8>, bus_conflicts: BusConflicts) -> Result<Self, String> {
+        let size = prg_rom.len();
+        if !(0x8000..=0x40000).contains(&size) || !size.is_power_of_two() {
+            return Err("AxROM requires power-of-two PRG size from 32 to 256 KiB".into());
+        }
+        // Deterministic startup policy; games must initialize the bank register.
+        Ok(Self {
+            prg_rom,
+            chr_ram: [0; 0x2000],
+            selected_prg_bank: 0,
+            nametable_upper: false,
+            bus_conflicts,
+        })
+    }
+}
+
+impl Mapper for Axrom {
+    fn read(&self, address: u16) -> u8 {
+        if address < 0x8000 { return 0; }
+        // Smaller chips mirror selections for unconnected bank address lines.
+        let bank = self.selected_prg_bank as usize % (self.prg_rom.len() / 0x8000);
+        self.prg_rom[bank * 0x8000 + (address as usize & 0x7fff)]
+    }
+
+    fn write(&mut self, address: u16, data: u8) {
+        if address >= 0x8000 {
+            // Sample the old PRG mapping before changing either register field.
+            let effective = match self.bus_conflicts {
+                BusConflicts::None => data,
+                BusConflicts::And => data & self.read(address),
+            };
+            self.selected_prg_bank = effective & 7;
+            self.nametable_upper = effective & 0x10 != 0;
+        }
+    }
+
+    fn ppu_read(&self, address: u16) -> u8 {
+        self.chr_ram[address as usize & 0x1fff]
+    }
+
+    fn ppu_write(&mut self, address: u16, data: u8) {
+        self.chr_ram[address as usize & 0x1fff] = data;
+    }
+
+    fn mirroring(&self) -> Mirroring {
+        if self.nametable_upper { Mirroring::SingleScreenUpper }
+        else { Mirroring::SingleScreenLower }
+    }
+
+    fn save_state(&self) -> Result<MapperState, String> {
+        Ok(MapperState::Axrom {
+            selected_prg_bank: self.selected_prg_bank,
+            nametable_upper: self.nametable_upper,
+            chr_ram: self.chr_ram,
+        })
+    }
+
+    fn load_state(&mut self, state: &MapperState) -> Result<(), String> {
+        let MapperState::Axrom { selected_prg_bank, nametable_upper, chr_ram } = state else {
+            return Err("savestate mapper mismatch".into());
+        };
+        if *selected_prg_bank > 7 {
+            return Err("invalid AxROM bank state".into());
+        }
+        self.selected_prg_bank = *selected_prg_bank;
+        self.nametable_upper = *nametable_upper;
+        self.chr_ram = *chr_ram;
+        Ok(())
+    }
+}

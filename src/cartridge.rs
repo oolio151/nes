@@ -1,4 +1,4 @@
-use crate::cpu::mapper::{BusConflicts, Cnrom, Mapper, Nrom, Uxrom};
+use crate::cpu::mapper::{Axrom, BusConflicts, Cnrom, Mapper, Nrom, Uxrom};
 use std::fs;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -164,6 +164,22 @@ pub fn load_rom(bytes: &[u8]) ->  Result<LoadedRom, String> {
                 n => return Err(format!("unsupported CNROM submapper {n}")),
             };
             Box::new(Cnrom::new(prg_rom, chr_rom, header.mirroring, conflicts)?)
+        }
+        7 => {
+            if !chr_rom.is_empty() || header.chr_ram_size != 0x2000
+                || prg_ram_size != 0 || header.battery_backed || header.has_trainer
+            {
+                return Err("supported AxROM boards require 8 KiB CHR RAM and no CHR ROM, PRG RAM, battery, or trainer".into());
+            }
+            if header.mirroring == Mirroring::FourScreen {
+                return Err("four-screen AxROM boards are not supported".into());
+            }
+            let conflicts = match header.submapper {
+                0 | 1 => BusConflicts::None,
+                2 => BusConflicts::And,
+                n => return Err(format!("unsupported AxROM submapper {n}")),
+            };
+            Box::new(Axrom::new(prg_rom, conflicts)?)
         }
         n => return Err(format!("mapper {} not yet implemented", n)),
     };

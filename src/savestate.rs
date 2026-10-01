@@ -217,6 +217,12 @@ pub enum MapperState {
     Nrom { #[serde(with = "serde_big_array::BigArray")] prg_ram: [u8; 0x2000], chr_ram: Vec<u8> },
     Uxrom { selected_bank: u8, #[serde(with = "serde_big_array::BigArray")] chr_ram: [u8; 0x2000] },
     Cnrom { selected_chr_bank: u8 },
+    Axrom {
+        selected_prg_bank: u8,
+        nametable_upper: bool,
+        #[serde(with = "serde_big_array::BigArray")]
+        chr_ram: [u8; 0x2000],
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
