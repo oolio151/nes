@@ -223,6 +223,7 @@ pub enum MapperState {
         #[serde(with = "serde_big_array::BigArray")]
         chr_ram: [u8; 0x2000],
     },
+    Gxrom { selected_prg_bank: u8, selected_chr_bank: u8 },
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

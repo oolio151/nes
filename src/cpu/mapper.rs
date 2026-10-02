@@ -291,3 +291,67 @@ impl Mapper for Axrom {
         Ok(())
     }
 }
+
+pub struct Gxrom {
+    prg_rom: Vec<u8>,
+    chr_rom: Vec<u8>,
+    selected_prg_bank: u8,
+    selected_chr_bank: u8,
+    mirroring: Mirroring,
+}
+
+impl Gxrom {
+    pub fn new(prg_rom: Vec<u8>, chr_rom: Vec<u8>, mirroring: Mirroring) -> Result<Self, String> {
+        if !matches!(prg_rom.len(), 0x8000 | 0x10000 | 0x20000) {
+            return Err("GxROM requires 32, 64, or 128 KiB PRG ROM".into());
+        }
+        if !matches!(chr_rom.len(), 0x2000 | 0x4000 | 0x8000) {
+            return Err("GxROM requires 8, 16, or 32 KiB CHR ROM".into());
+        }
+        Ok(Self { prg_rom, chr_rom, selected_prg_bank: 0, selected_chr_bank: 0, mirroring })
+    }
+}
+
+impl Mapper for Gxrom {
+    fn read(&self, address: u16) -> u8 {
+        if address < 0x8000 { return 0; }
+        let bank = self.selected_prg_bank as usize % (self.prg_rom.len() / 0x8000);
+        self.prg_rom[bank * 0x8000 + (address as usize & 0x7fff)]
+    }
+
+    fn write(&mut self, address: u16, data: u8) {
+        if address >= 0x8000 {
+            let effective = data & self.read(address);
+            self.selected_prg_bank = (effective >> 4) & 3;
+            self.selected_chr_bank = effective & 3;
+        }
+    }
+
+    fn ppu_read(&self, address: u16) -> u8 {
+        let bank = self.selected_chr_bank as usize % (self.chr_rom.len() / 0x2000);
+        self.chr_rom[bank * 0x2000 + (address as usize & 0x1fff)]
+    }
+
+    fn ppu_write(&mut self, _address: u16, _data: u8) {}
+
+    fn mirroring(&self) -> Mirroring { self.mirroring }
+
+    fn save_state(&self) -> Result<MapperState, String> {
+        Ok(MapperState::Gxrom {
+            selected_prg_bank: self.selected_prg_bank,
+            selected_chr_bank: self.selected_chr_bank,
+        })
+    }
+
+    fn load_state(&mut self, state: &MapperState) -> Result<(), String> {
+        let MapperState::Gxrom { selected_prg_bank, selected_chr_bank } = state else {
+            return Err("savestate mapper mismatch".into());
+        };
+        if *selected_prg_bank > 3 || *selected_chr_bank > 3 {
+            return Err("invalid GxROM bank state".into());
+        }
+        self.selected_prg_bank = *selected_prg_bank;
+        self.selected_chr_bank = *selected_chr_bank;
+        Ok(())
+    }
+}
