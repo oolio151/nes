@@ -6,3 +6,4 @@ pub mod emulator;
 pub mod input; 
 pub mod audio;
 pub mod savestate;
+pub mod battery;

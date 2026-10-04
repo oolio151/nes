@@ -128,7 +128,7 @@ pub fn cpy_absolute(cpu: &mut CPU) -> u8 {
 fn dcp(cpu: &mut CPU, addr: u16) {
     let value = cpu.read(addr);
     let result = dec(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     cmp(cpu, result);
 }

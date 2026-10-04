@@ -224,6 +224,17 @@ pub enum MapperState {
         chr_ram: [u8; 0x2000],
     },
     Gxrom { selected_prg_bank: u8, selected_chr_bank: u8 },
+    Mmc1 {
+        shift: u8,
+        write_count: u8,
+        control: u8,
+        chr_bank0: u8,
+        chr_bank1: u8,
+        prg_bank: u8,
+        last_write_cycle: Option<u64>,
+        prg_ram: Vec<u8>,
+        chr_ram: Vec<u8>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -305,6 +316,11 @@ pub fn load_file(emu: &mut Emulator) -> Result<(), SaveError> {
 }
 
 fn validate(state: &SaveState) -> Result<(), SaveError> {
+    if let MapperState::Mmc1 { last_write_cycle: Some(last), .. } = &state.bus.mapper {
+        if *last >= state.cpu.cycle_count {
+            return Err("MMC1 write timestamp is outside elapsed CPU time".into());
+        }
+    }
     let p = &state.bus.ppu;
     let a = &state.bus.apu;
     let valid = p.framebuffer.len() == 61440

@@ -270,7 +270,11 @@ fn main() {
 
     let mut app = App::new(emu, audio_buffer, audio.sample_rate, audio.stream);
 
-    event_loop.run_app(&mut app).unwrap();
+    let result = event_loop.run_app(&mut app);
+    if let Err(error) = app.emu.flush_battery() {
+        eprintln!("Battery save failed: {error}");
+    }
+    result.unwrap();
 }
 
 fn prompt_for_rom_path() -> String {

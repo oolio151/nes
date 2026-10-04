@@ -10,6 +10,15 @@ pub trait Mapper {
     }
     fn read(&self, address: u16) -> u8;
     fn write(&mut self, address: u16, data: u8);
+    /// CPU instruction writes carry their actual write-cycle offset.
+    fn write_timed(&mut self, address: u16, data: u8, _cpu_cycle: u64) {
+        self.write(address, data);
+    }
+    fn reset_write_timing(&mut self) {}
+    fn persistent_ram(&self) -> &[u8] { &[] }
+    fn load_persistent_ram(&mut self, data: &[u8]) -> Result<(), String> {
+        if data.is_empty() { Ok(()) } else { Err("mapper has no persistent RAM".into()) }
+    }
     fn ppu_read(&self, address: u16) -> u8;
     fn ppu_write(&mut self, address: u16, data: u8);
     fn mirroring(&self) -> Mirroring;
@@ -22,10 +31,13 @@ pub struct Nrom {
     chr_is_ram: bool,
     prg_ram: [u8; 0x2000],
     prg_ram_enabled: bool,
+    battery_backed: bool,
     mirroring: Mirroring,
 }
 
 impl Nrom {
+    pub(crate) fn set_battery_backed(&mut self, enabled: bool) { self.battery_backed = enabled; }
+
     pub(crate) fn set_prg_ram_enabled(&mut self, enabled: bool) {
         self.prg_ram_enabled = enabled;
     }
@@ -44,12 +56,24 @@ impl Nrom {
             chr_is_ram,
             prg_ram: [0; 0x2000],
             prg_ram_enabled: true,
+            battery_backed: false,
             mirroring,
         }
     }
 }
 
 impl Mapper for Nrom {
+    fn persistent_ram(&self) -> &[u8] {
+        if self.battery_backed && self.prg_ram_enabled { &self.prg_ram } else { &[] }
+    }
+    fn load_persistent_ram(&mut self, data: &[u8]) -> Result<(), String> {
+        if data.len() != self.persistent_ram().len() {
+            return Err("battery save size does not match NROM PRG NVRAM".into());
+        }
+        if !data.is_empty() { self.prg_ram.copy_from_slice(data); }
+        Ok(())
+    }
+
     fn save_state(&self) -> Result<MapperState, String> {
         Ok(MapperState::Nrom {
             prg_ram: self.prg_ram,
@@ -352,6 +376,196 @@ impl Mapper for Gxrom {
         }
         self.selected_prg_bank = *selected_prg_bank;
         self.selected_chr_bank = *selected_chr_bank;
+        Ok(())
+    }
+}
+
+/// MMC1B core for ordinary boards with up to 256 KiB PRG, 128 KiB CHR ROM
+/// (or 8 KiB CHR RAM), and at most one 8 KiB PRG RAM bank.
+/// Outer banking and SNROM's additional CHR-controlled RAM gate are not modeled.
+pub struct Mmc1 {
+    prg_rom: Vec<u8>,
+    chr: Vec<u8>,
+    chr_is_ram: bool,
+    prg_ram: Vec<u8>,
+    battery_backed: bool,
+    four_screen: bool,
+    shift: u8,
+    write_count: u8,
+    control: u8,
+    chr_bank0: u8,
+    chr_bank1: u8,
+    prg_bank: u8,
+    last_write_cycle: Option<u64>,
+}
+
+impl Mmc1 {
+    pub fn new(
+        prg_rom: Vec<u8>, chr_rom: Vec<u8>, prg_ram_size: usize,
+        battery_backed: bool, mirroring: Mirroring,
+    ) -> Result<Self, String> {
+        let size = prg_rom.len();
+        if !(0x4000..=0x40000).contains(&size) || !size.is_power_of_two() {
+            return Err("MMC1B requires power-of-two PRG ROM from 16 to 256 KiB; outer banking is unsupported".into());
+        }
+        let chr_size = chr_rom.len();
+        if chr_size != 0 && (!(0x2000..=0x20000).contains(&chr_size) || !chr_size.is_power_of_two()) {
+            return Err("MMC1B requires power-of-two CHR ROM from 8 to 128 KiB, or 8 KiB CHR RAM".into());
+        }
+        if !matches!(prg_ram_size, 0 | 0x2000) || (battery_backed && prg_ram_size == 0) {
+            return Err("MMC1B supports no PRG RAM or one 8 KiB RAM bank".into());
+        }
+        let chr_is_ram = chr_rom.is_empty();
+        Ok(Self {
+            prg_rom,
+            chr: if chr_is_ram { vec![0; 0x2000] } else { chr_rom },
+            chr_is_ram,
+            prg_ram: vec![0; prg_ram_size],
+            battery_backed,
+            four_screen: mirroring == Mirroring::FourScreen,
+            // Deterministic startup: bank 0 / last bank, 8 KiB CHR, lower page.
+            shift: 0, write_count: 0, control: 0x0c,
+            chr_bank0: 0, chr_bank1: 0, prg_bank: 0, last_write_cycle: None,
+        })
+    }
+
+    fn chr_index(&self, address: u16) -> usize {
+        let address = address as usize & 0x1fff;
+        let bank = if self.control & 0x10 == 0 {
+            (self.chr_bank0 as usize & !1) + (address >> 12)
+        } else if address < 0x1000 { self.chr_bank0 as usize }
+        else { self.chr_bank1 as usize };
+        (bank * 0x1000 + (address & 0xfff)) % self.chr.len()
+    }
+
+    fn register_write(&mut self, address: u16, data: u8, consecutive: bool) {
+        // Bit 7 reset remains effective even on the second write of an RMW.
+        if data & 0x80 != 0 {
+            self.shift = 0;
+            self.write_count = 0;
+            self.control |= 0x0c;
+            return;
+        }
+        if consecutive { return; }
+        self.shift |= (data & 1) << self.write_count;
+        self.write_count += 1;
+        if self.write_count == 5 {
+            match address {
+                0x8000..=0x9fff => self.control = self.shift,
+                0xa000..=0xbfff => self.chr_bank0 = self.shift,
+                0xc000..=0xdfff => self.chr_bank1 = self.shift,
+                0xe000..=0xffff => self.prg_bank = self.shift,
+                _ => unreachable!(),
+            }
+            self.shift = 0;
+            self.write_count = 0;
+        }
+    }
+
+    fn write_inner(&mut self, address: u16, data: u8, consecutive: bool) {
+        match address {
+            0x6000..=0x7fff if !self.prg_ram.is_empty() && self.prg_bank & 0x10 == 0 => {
+                self.prg_ram[address as usize - 0x6000] = data;
+            }
+            0x8000..=0xffff => self.register_write(address, data, consecutive),
+            _ => {}
+        }
+    }
+}
+
+impl Mapper for Mmc1 {
+    fn read(&self, address: u16) -> u8 {
+        match address {
+            0x6000..=0x7fff if !self.prg_ram.is_empty() && self.prg_bank & 0x10 == 0 => {
+                self.prg_ram[address as usize - 0x6000]
+            }
+            0x8000..=0xffff => {
+                let banks = self.prg_rom.len() / 0x4000;
+                let selected = (self.prg_bank & 0x0f) as usize;
+                let upper = address >= 0xc000;
+                let bank = match (self.control >> 2) & 3 {
+                    0 | 1 => (selected & !1) + usize::from(upper),
+                    2 => if upper { selected } else { 0 },
+                    _ => if upper { banks - 1 } else { selected },
+                } % banks;
+                self.prg_rom[bank * 0x4000 + (address as usize & 0x3fff)]
+            }
+            _ => 0, // Consistent with the emulator's current unmapped-bus policy.
+        }
+    }
+
+    // Untimed calls are for direct setup/debug access, not CPU instruction execution.
+    fn write(&mut self, address: u16, data: u8) {
+        self.last_write_cycle = None;
+        self.write_inner(address, data, false);
+    }
+
+    fn write_timed(&mut self, address: u16, data: u8, cpu_cycle: u64) {
+        let consecutive = self.last_write_cycle
+            .is_some_and(|last| last.wrapping_add(1) == cpu_cycle);
+        // Track ignored writes too, so an entire run after its first write is ignored.
+        self.last_write_cycle = Some(cpu_cycle);
+        self.write_inner(address, data, consecutive);
+    }
+
+    fn reset_write_timing(&mut self) { self.last_write_cycle = None; }
+
+    fn ppu_read(&self, address: u16) -> u8 { self.chr[self.chr_index(address)] }
+    fn ppu_write(&mut self, address: u16, data: u8) {
+        if self.chr_is_ram {
+            let index = self.chr_index(address);
+            self.chr[index] = data;
+        }
+    }
+    fn mirroring(&self) -> Mirroring {
+        if self.four_screen { return Mirroring::FourScreen; }
+        match self.control & 3 {
+            0 => Mirroring::SingleScreenLower,
+            1 => Mirroring::SingleScreenUpper,
+            2 => Mirroring::Vertical,
+            _ => Mirroring::Horizontal,
+        }
+    }
+    fn persistent_ram(&self) -> &[u8] {
+        if self.battery_backed { &self.prg_ram } else { &[] }
+    }
+    fn load_persistent_ram(&mut self, data: &[u8]) -> Result<(), String> {
+        if data.len() != self.persistent_ram().len() {
+            return Err("battery save size does not match MMC1 PRG NVRAM".into());
+        }
+        if self.battery_backed { self.prg_ram.copy_from_slice(data); }
+        Ok(())
+    }
+    fn save_state(&self) -> Result<MapperState, String> {
+        Ok(MapperState::Mmc1 {
+            shift: self.shift, write_count: self.write_count, control: self.control,
+            chr_bank0: self.chr_bank0, chr_bank1: self.chr_bank1, prg_bank: self.prg_bank,
+            last_write_cycle: self.last_write_cycle,
+            prg_ram: self.prg_ram.clone(),
+            chr_ram: if self.chr_is_ram { self.chr.clone() } else { Vec::new() },
+        })
+    }
+    fn load_state(&mut self, state: &MapperState) -> Result<(), String> {
+        let MapperState::Mmc1 { shift, write_count, control, chr_bank0, chr_bank1,
+            prg_bank, last_write_cycle, prg_ram, chr_ram } = state else {
+            return Err("savestate mapper mismatch".into());
+        };
+        if *write_count > 4 || (*shift as u16) >= (1u16 << *write_count)
+            || [*control, *chr_bank0, *chr_bank1, *prg_bank].iter().any(|v| *v > 31)
+            || prg_ram.len() != self.prg_ram.len()
+            || chr_ram.len() != if self.chr_is_ram { 0x2000 } else { 0 }
+        {
+            return Err("invalid MMC1 savestate".into());
+        }
+        self.shift = *shift;
+        self.write_count = *write_count;
+        self.control = *control;
+        self.chr_bank0 = *chr_bank0;
+        self.chr_bank1 = *chr_bank1;
+        self.prg_bank = *prg_bank;
+        self.last_write_cycle = *last_write_cycle;
+        self.prg_ram.copy_from_slice(prg_ram);
+        if self.chr_is_ram { self.chr.copy_from_slice(chr_ram); }
         Ok(())
     }
 }

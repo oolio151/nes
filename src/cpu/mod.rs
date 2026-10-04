@@ -27,6 +27,11 @@ pub trait Bus {
     }
     fn read(&self, address: u16) -> u8;
     fn write(&mut self, address: u16, data: u8);
+    fn write_timed(&mut self, address: u16, data: u8, _cpu_cycle: u64) {
+        self.write(address, data);
+    }
+    fn reset_write_timing(&mut self) {}
+    fn persistent_ram(&self) -> &[u8] { &[] }
     fn tick_ppu(&mut self) -> bool;
     fn get_framebuffer(&self) -> &[(u8, u8, u8)];
     fn take_dma_cycles(&mut self) -> u16;
@@ -92,6 +97,15 @@ pub struct NesBus {
 }
 
 impl Bus for NesBus {
+    fn write_timed(&mut self, address: u16, data: u8, cpu_cycle: u64) {
+        // MMC1 observes consecutive CPU writes even outside its serial port.
+        // Supported mappers ignore addresses below their cartridge window.
+        self.cartridge.write_timed(address, data, cpu_cycle);
+        if address < 0x4020 { self.write(address, data); }
+    }
+    fn reset_write_timing(&mut self) { self.cartridge.reset_write_timing(); }
+    fn persistent_ram(&self) -> &[u8] { self.cartridge.persistent_ram() }
+
     fn save_state(&self) -> Result<crate::savestate::BusState, String> {
         Ok(crate::savestate::BusState {
             cpu_ram: self.cpu_ram,
@@ -261,7 +275,8 @@ pub struct CPU {
     bit 1 - zero flag
     bit 0 - carry flag
      */
-    cycle_count: u64 //used to keep cycles in track with the ppu
+    cycle_count: u64, // Elapsed CPU cycles at an instruction boundary.
+    instruction_cycles: Option<u8>, // Transient; savestates occur between instructions.
 }
 
 impl CPU {
@@ -276,7 +291,8 @@ impl CPU {
                 // to write to stack, write to 0x0100 + cpu.s as u16
                 s: 0b1111_1101,
                 p: 0b0010_0000, // status register
-                cycle_count: 0
+                cycle_count: 0,
+                instruction_cycles: None,
 
             }
             
@@ -287,8 +303,28 @@ impl CPU {
     }
 
     pub fn write(&mut self, address: u16, data: u8) {
-        self.bus.write(address, data)
+        if let Some(cycles) = self.instruction_cycles {
+            // All implemented store instructions write on their last fixed cycle.
+            let cycle = self.cycle_count.wrapping_add(cycles as u64 - 1);
+            self.bus.write_timed(address, data, cycle);
+        } else {
+            // Direct setup/debug writes have no hardware timing attached.
+            self.bus.write(address, data);
+        }
     }
+
+    pub(crate) fn write_rmw(&mut self, address: u16, original: u8, modified: u8) {
+        if let Some(cycles) = self.instruction_cycles {
+            let last = self.cycle_count.wrapping_add(cycles as u64 - 1);
+            self.bus.write_timed(address, original, last.wrapping_sub(1));
+            self.bus.write_timed(address, modified, last);
+        } else {
+            self.bus.write(address, original);
+            self.bus.write(address, modified);
+        }
+    }
+
+    pub fn persistent_ram(&self) -> &[u8] { self.bus.persistent_ram() }
 
     pub fn reset(&mut self){
         self.a = 0;
@@ -298,16 +334,21 @@ impl CPU {
         self.s = 0xFD;
         self.p = 0b0010_0100;
         self.cycle_count = 0;
+        self.instruction_cycles = None;
+        // Reset restarts the software clock; retain mapper registers/RAM.
+        self.bus.reset_write_timing();
     }
 
     pub fn tick(&mut self) -> u16 {
         let opcode: u8 = self.read(self.pc);
         self.pc = self.pc.wrapping_add(1);
         let (instruction, base_cycles) = opcodes::decode(opcode);
+        self.instruction_cycles = Some(base_cycles);
         let extra_cycles = instruction(self);
+        self.instruction_cycles = None;
         let dma_cycles = self.bus.take_dma_cycles();
         let total_cycles = base_cycles as u16 + extra_cycles as u16 + dma_cycles;
-        self.cycle_count += total_cycles as u64;
+        self.cycle_count = self.cycle_count.wrapping_add(total_cycles as u64);
         
         total_cycles
     }
@@ -378,14 +419,17 @@ impl CPU {
         self.pc = (self.read(vector_addr) as u16) | ((self.read(vector_addr + 1) as u16) << 8);
     }
 
-    pub fn nmi(&mut self) {
+    pub fn nmi(&mut self) -> u16 {
         self.interrupt(0xFFFA, false);
+        self.cycle_count = self.cycle_count.wrapping_add(7);
+        7
     }
 
-    pub fn irq(&mut self) {
-        if !self.get_flag(Flag::InterruptDisable) {
-            self.interrupt(0xFFFE, false);
-        }
+    pub fn irq(&mut self) -> u16 {
+        if self.get_flag(Flag::InterruptDisable) { return 0; }
+        self.interrupt(0xFFFE, false);
+        self.cycle_count = self.cycle_count.wrapping_add(7);
+        7
     }
 
     pub fn tick_ppu(&mut self) -> bool {
@@ -451,6 +495,7 @@ impl CPU {
         self.s = state.s;
         self.p = state.p;
         self.cycle_count = state.cycle_count;
+        self.instruction_cycles = None;
     }
 
     pub(crate) fn save_bus_state(&self) -> Result<crate::savestate::BusState, String> {

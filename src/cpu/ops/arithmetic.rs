@@ -90,7 +90,7 @@ pub fn dec_zeropage(cpu: &mut CPU) -> u8 {
 
     let result = dec(cpu, value);
 
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     0
 }
@@ -102,7 +102,7 @@ pub fn dec_zeropagex(cpu: &mut CPU) -> u8 {
 
     let result = dec(cpu, value);
 
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     0
 }
@@ -114,7 +114,7 @@ pub fn dec_absolute(cpu: &mut CPU) -> u8 {
 
     let result = dec(cpu, value);
 
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     0
 }
@@ -125,7 +125,7 @@ pub fn dec_absolutex(cpu: &mut CPU) -> u8 {
 
     let result = dec(cpu, value);
 
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     0
 }
@@ -167,7 +167,7 @@ pub fn dey(cpu: &mut CPU) -> u8 {
 
         let result = inc(cpu, value);
 
-        cpu.write(addr, result);
+        cpu.write_rmw(addr, value, result);
 
         0
     }
@@ -179,7 +179,7 @@ pub fn dey(cpu: &mut CPU) -> u8 {
 
         let result = inc(cpu, value);
 
-        cpu.write(addr, result);
+        cpu.write_rmw(addr, value, result);
 
         0
     }
@@ -191,7 +191,7 @@ pub fn dey(cpu: &mut CPU) -> u8 {
 
         let result = inc(cpu, value);
 
-        cpu.write(addr, result);
+        cpu.write_rmw(addr, value, result);
 
         0
     }
@@ -202,7 +202,7 @@ pub fn dey(cpu: &mut CPU) -> u8 {
 
         let result = inc(cpu, value);
 
-        cpu.write(addr, result);
+        cpu.write_rmw(addr, value, result);
 
         0
     }
@@ -290,7 +290,7 @@ pub fn sbc_indirecty(cpu: &mut CPU) -> u8 {
 fn rra(cpu: &mut CPU, addr: u16) {
     let value = cpu.read(addr);
     let result = ror(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     adc(cpu, result);
 }
@@ -340,7 +340,7 @@ pub fn rra_indirecty(cpu: &mut CPU) -> u8 {
 fn isc(cpu: &mut CPU, addr: u16) {
     let value = cpu.read(addr);
     let result = inc(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     sbc(cpu, result);
 }

@@ -28,7 +28,7 @@ pub fn asl_zeropage(cpu: &mut CPU) -> u8 {
 
     let result = asl(cpu, value);
 
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     0
 }
@@ -39,7 +39,7 @@ pub fn asl_zeropagex(cpu: &mut CPU) -> u8 {
 
     let result = asl(cpu, value);
 
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     0
 }
@@ -50,7 +50,7 @@ pub fn asl_absolute(cpu: &mut CPU) -> u8 {
 
     let result = asl(cpu, value);
 
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     0
 }
@@ -61,7 +61,7 @@ pub fn asl_absolutex(cpu: &mut CPU) -> u8 {
 
     let result = asl(cpu, value);
 
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     0
 }
@@ -89,7 +89,7 @@ pub fn lsr_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
     let value = cpu.read(addr);
     let result = lsr(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -97,7 +97,7 @@ pub fn lsr_zeropagex(cpu: &mut CPU) -> u8 {
     let addr = zeropagex(cpu);
     let value = cpu.read(addr);
     let result = lsr(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -105,7 +105,7 @@ pub fn lsr_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
     let value = cpu.read(addr);
     let result = lsr(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -113,7 +113,7 @@ pub fn lsr_absolutex(cpu: &mut CPU) -> u8 {
     let (addr, _page_crossed) = absolutex(cpu);
     let value = cpu.read(addr);
     let result = lsr(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -144,7 +144,7 @@ pub fn rol_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
     let value = cpu.read(addr);
     let result = rol(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -152,7 +152,7 @@ pub fn rol_zeropagex(cpu: &mut CPU) -> u8 {
     let addr = zeropagex(cpu);
     let value = cpu.read(addr);
     let result = rol(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -160,7 +160,7 @@ pub fn rol_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
     let value = cpu.read(addr);
     let result = rol(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -168,7 +168,7 @@ pub fn rol_absolutex(cpu: &mut CPU) -> u8 {
     let (addr, _page_crossed) = absolutex(cpu);
     let value = cpu.read(addr);
     let result = rol(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -199,7 +199,7 @@ pub fn ror_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
     let value = cpu.read(addr);
     let result = ror(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -207,7 +207,7 @@ pub fn ror_zeropagex(cpu: &mut CPU) -> u8 {
     let addr = zeropagex(cpu);
     let value = cpu.read(addr);
     let result = ror(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -215,7 +215,7 @@ pub fn ror_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
     let value = cpu.read(addr);
     let result = ror(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -223,7 +223,7 @@ pub fn ror_absolutex(cpu: &mut CPU) -> u8 {
     let (addr, _page_crossed) = absolutex(cpu);
     let value = cpu.read(addr);
     let result = ror(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
     0
 }
 
@@ -232,7 +232,7 @@ pub fn ror_absolutex(cpu: &mut CPU) -> u8 {
 fn slo(cpu: &mut CPU, addr: u16) {
     let value = cpu.read(addr);
     let result = asl(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     ora(cpu, result);
 }
@@ -282,7 +282,7 @@ pub fn slo_indirecty(cpu: &mut CPU) -> u8 {
 fn rla(cpu: &mut CPU, addr: u16) {
     let value = cpu.read(addr);
     let result = rol(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     and(cpu, result);
 }
@@ -333,7 +333,7 @@ pub fn rla_indirecty(cpu: &mut CPU) -> u8 {
 fn sre(cpu: &mut CPU, addr: u16) {
     let value = cpu.read(addr);
     let result = lsr(cpu, value);
-    cpu.write(addr, result);
+    cpu.write_rmw(addr, value, result);
 
     eor(cpu, result);
 }

@@ -1,4 +1,4 @@
-use crate::cpu::mapper::{Axrom, BusConflicts, Cnrom, Gxrom, Mapper, Nrom, Uxrom};
+use crate::cpu::mapper::{Axrom, BusConflicts, Cnrom, Gxrom, Mapper, Mmc1, Nrom, Uxrom};
 use std::fs;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -66,7 +66,7 @@ pub fn parse_header(bytes: &[u8]) -> Result<CartridgeHeader, String> {
     let chr_rom_size = rom_size(bytes[5], if nes2 { bytes[9] >> 4 } else { 0 }, 0x2000)?;
     // Legacy iNES RAM declarations are ambiguous. Preserve the existing
     // supported-board defaults; NES 2.0 sizes are always explicit.
-    let legacy_ram = if mapper_number == 0 { (bytes[8] as usize).max(1) * 0x2000 }
+    let legacy_ram = if matches!(mapper_number, 0 | 1) { (bytes[8] as usize).max(1) * 0x2000 }
         else { bytes[8] as usize * 0x2000 };
     Ok(CartridgeHeader {
         format: if nes2 { HeaderFormat::Nes2 } else { HeaderFormat::INes },
@@ -134,6 +134,29 @@ pub fn load_rom(bytes: &[u8]) ->  Result<LoadedRom, String> {
             if header.has_trainer && prg_ram_size == 0 { return Err("NROM trainer requires PRG RAM".into()); }
             let mut mapper = Nrom::with_mirroring(prg_rom, chr_rom, header.mirroring);
             mapper.set_prg_ram_enabled(prg_ram_size != 0);
+            mapper.set_battery_backed(header.prg_nvram_size != 0);
+            if header.has_trainer {
+                for (offset, data) in bytes[16..528].iter().enumerate() {
+                    mapper.write(0x7000 + offset as u16, *data);
+                }
+            }
+            Box::new(mapper)
+        }
+        1 => {
+            if header.submapper != 0 {
+                return Err(format!("unsupported MMC1 submapper {}; only ordinary MMC1B boards are implemented", header.submapper));
+            }
+            if header.prg_ram_size != 0 && header.prg_nvram_size != 0 {
+                return Err("MMC1 boards with multiple PRG RAM banks are unsupported".into());
+            }
+            if header.battery_backed && header.prg_nvram_size == 0 {
+                return Err("MMC1 battery flag requires declared PRG NVRAM".into());
+            }
+            if header.has_trainer && prg_ram_size != 0x2000 {
+                return Err("MMC1 trainer requires 8 KiB PRG RAM".into());
+            }
+            let mut mapper = Mmc1::new(prg_rom, chr_rom, prg_ram_size,
+                header.prg_nvram_size != 0, header.mirroring)?;
             if header.has_trainer {
                 for (offset, data) in bytes[16..528].iter().enumerate() {
                     mapper.write(0x7000 + offset as u16, *data);
