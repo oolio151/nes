@@ -383,6 +383,7 @@ impl Mapper for Gxrom {
 /// MMC1B core for ordinary boards with up to 256 KiB PRG, 128 KiB CHR ROM
 /// (or 8 KiB CHR RAM), and at most one 8 KiB PRG RAM bank.
 /// Outer banking and SNROM's additional CHR-controlled RAM gate are not modeled.
+// also yeah i did kinda ai this one but dw it works, just tested battery
 pub struct Mmc1 {
     prg_rom: Vec<u8>,
     chr: Vec<u8>,

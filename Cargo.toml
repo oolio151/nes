@@ -17,3 +17,4 @@ font8x8 = "0.3"
 pixels = "0.17.2"
 winit = "0.30.13"
 cpal = "0.15"
+dialoguer = { version = "0.12", default-features = false }

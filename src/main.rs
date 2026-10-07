@@ -1,3 +1,4 @@
+mod rom_prompt;
 use font8x8::{UnicodeFonts, BASIC_FONTS};
 use pixels::{Pixels, SurfaceTexture};
 use winit::application::ApplicationHandler;
@@ -8,7 +9,6 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
-use std::io::{self, Write};
 use std::sync::{Mutex};
 use std::collections::VecDeque;
 use oolio151_nes::emulator::Emulator;
@@ -258,7 +258,14 @@ fn put_pixel(frame: &mut [u8], x: u32, y: u32, color: [u8; 4]) {
 }
 
 fn main() {
-    let rom_path = prompt_for_rom_path();
+    let rom_path = match rom_prompt::prompt_for_rom_path() {
+        Ok(Some(path)) => path,
+        Ok(None) => return,
+        Err(error) => {
+            eprintln!("Unable to read ROM path: {error}");
+            return;
+        }
+    };
     let mut emu = Emulator::from_file(&rom_path).expect("failed to load ROM");
 
     let event_loop = EventLoop::new().unwrap();
@@ -277,28 +284,3 @@ fn main() {
     result.unwrap();
 }
 
-fn prompt_for_rom_path() -> String {
-    loop {
-        print!("Enter path to ROM file: ");
-        io::stdout().flush().unwrap();
-
-        let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .expect("failed to read input");
-
-        let path = input.trim();
-
-        if path.is_empty() {
-            println!("Path cannot be empty, try again.");
-            continue;
-        }
-
-        if !std::path::Path::new(path).exists() {
-            println!("No file found at '{}', try again.", path);
-            continue;
-        }
-
-        return path.to_string();
-    }
-}

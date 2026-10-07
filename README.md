@@ -2,6 +2,9 @@
 An emulator of the Nintendo Entertainment System, built in Rust. Currently in Development.
 
 ## How to Play
+
+At the ROM path prompt, enter a file directly or a directory to browse its `.nes` files. Use Up/Down arrows and Enter to select a ROM, or Esc to return to the path prompt. The list is alphabetical and includes `.NES` files; subdirectories are not searched.
+
 Emulator is still pretty new, so loading games is done via terminal, simply enter the file path relative to the executable.<br>
 
 **CONTROLS**
