@@ -1,5 +1,5 @@
 # oolio151-nes
-An emulator of the Nintendo Entertainment System, built in Rust. Currently in Development.
+An emulator of the Nintendo Entertainment System, built in Rust.
 
 ## How to Play
 
@@ -8,6 +8,7 @@ At the ROM path prompt, enter a file directly or a directory to browse its `.nes
 Emulator is still pretty new, so loading games is done via terminal, simply enter the file path relative to the executable.<br>
 
 **CONTROLS**
+These will be customizable later.
 - Z - A
 - X - B
 - A - Select
@@ -16,10 +17,11 @@ Emulator is still pretty new, so loading games is done via terminal, simply ente
 - Y - Load State
 
 ## Development
-Currently the emulator is functional with [NROM/mapper 0 games](https://nescartdb.com/search/advanced?ines=0&rows=400&rfa=1+2+11+3+9+20+41+53+10). More mappers will come soon to expand the game library. This emulator is meant to emulate an NTSC-region NES.
+This emulator is meant to emulate an NTSC-region NES. Check the latest release to see what mappers are supported.
 
-
+## Saves
+Pretty lazy for now, but savestates (.ss0) and battery saves (.sav) are just saved to the same location as the rom file.
 
 ## Other info
 cpu tests are from [SingleStepTests/65x02](https://github.com/SingleStepTests/65x02)<br>
-passed 75/141 tests from [100thCoin/AccuracyCoin](https://github.com/100thCoin/AccuracyCoin) (better than many official Nintendo emulators btw!)
+passed 80/141 tests from [100thCoin/AccuracyCoin](https://github.com/100thCoin/AccuracyCoin) (better than many official Nintendo emulators btw!)
