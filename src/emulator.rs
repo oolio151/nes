@@ -38,29 +38,18 @@ impl Emulator {
         Ok(())
     }
 
-    fn advance_chips(&mut self, cpu_cycles: u16) -> bool {
-        let mut nmi = false;
-        for _ in 0..(cpu_cycles as u32 * 3) {
-            nmi |= self.cpu.tick_ppu();
-        }
-        self.cpu.tick_apu(cpu_cycles as u32);
-        nmi
-    }
-
     pub fn step(&mut self) -> bool {
-        let cpu_cycles = self.cpu.tick();
-        let mut nmi = self.advance_chips(cpu_cycles);
+        self.cpu.tick();
+        let mut nmi = self.cpu.take_nmi();
         let mut nmi_fired = false;
-        // Interrupts are sampled at the instruction boundary. Their seven
-        // service cycles advance all chips and the CPU timestamp together.
-        if !nmi && self.cpu.irq_pending() {
-            let cycles = self.cpu.irq();
-            if cycles != 0 { nmi = self.advance_chips(cycles); }
+        if !nmi {
+            self.cpu.service_pending_irq();
+            nmi = self.cpu.take_nmi();
         }
         while nmi {
             nmi_fired = true;
-            let cycles = self.cpu.nmi();
-            nmi = self.advance_chips(cycles);
+            self.cpu.nmi();
+            nmi = self.cpu.take_nmi();
         }
         nmi_fired
     }

@@ -86,8 +86,12 @@ impl PPU {
 
         let dot = self.dot;
 
-        // idle on cycle 0
+        // Visible-line dot 0 drives an aborted pattern-low read. Its A12
+        // pulse prevents false clocks between the last two nametable fetches
+        // and dot 5. On short frames it instead completes pre-render dot 339.
         if dot == 0 {
+            if self.short_frame_pending_fetch { self.nt_latch = self.sample_bus(mapper); }
+            else if self.scanline >= 0 { self.begin_pattern_low_fetch(mapper); }
             return;
         }
 
@@ -103,19 +107,15 @@ impl PPU {
             }
 
             match (dot - 1) % 8 {
-                0 => {
-                    self.nt_latch = self.fetch_nametable_byte(mapper);
-                }
-                2 => {
-                    self.at_latch = self.fetch_attribute_byte(mapper);
-                }
-                4 => {
-                    self.bg_lo_latch = self.fetch_pattern_low(mapper);
-                }
-                6 => {
-                    self.bg_hi_latch = self.fetch_pattern_high(mapper);
-                }
+                0 => self.begin_nametable_fetch(mapper),
+                1 => self.nt_latch = self.sample_bus(mapper),
+                2 => self.begin_attribute_fetch(mapper),
+                3 => self.at_latch = self.sample_bus(mapper),
+                4 => self.begin_pattern_low_fetch(mapper),
+                5 => self.bg_lo_latch = self.sample_bus(mapper),
+                6 => self.begin_pattern_high_fetch(mapper),
                 7 => {
+                    self.bg_hi_latch = self.sample_bus(mapper);
                     self.bg_shift_lo = (self.bg_shift_lo & 0xFF00) | self.bg_lo_latch as u16;
                     self.bg_shift_hi = (self.bg_shift_hi & 0xFF00) | self.bg_hi_latch as u16;
 
@@ -149,6 +149,11 @@ impl PPU {
             self.copy_vertical_bits();
         }
 
-        // dots 337-340 are weird, not topuching thnat
+        // Two dummy nametable fetches; the address remains driven between them.
+        match dot {
+            337 | 339 => self.begin_nametable_fetch(mapper),
+            338 | 340 => { self.nt_latch = self.sample_bus(mapper); }
+            _ => {}
+        }
     }
 }

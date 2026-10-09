@@ -2,66 +2,41 @@ use super::PPU;
 use crate::cpu::mapper::Mapper;
 
 impl PPU {
-    // takes one of the sprites from oam2 and prepares it to be drawn on next scanline
-    fn load_sprite_from_secondary_oam(&mut self, sprite_num: usize, mapper: &dyn Mapper) {
+    fn sprite_pattern_address(&self, sprite_num: usize) -> u16 {
         let base = sprite_num * 4;
         let y = self.oam2[base];
         let tile = self.oam2[base + 1];
         let attr = self.oam2[base + 2];
-        let x = self.oam2[base + 3];
-
-        self.sprite_x[sprite_num] = x;
-        self.sprite_attr[sprite_num] = attr;
-
-        if y == 0xFF {
-            // unused slot, transparent
-            self.sprite_pattern_lo[sprite_num] = 0;
-            self.sprite_pattern_hi[sprite_num] = 0;
-            return;
-        }
-
-        let sprite_height: u16 = if self.sprites_8x16 { 16 } else { 8 };
-        let flip_v = attr & 0b1000_0000 != 0;
-        let flip_h = attr & 0b0100_0000 != 0;
-
-        let target_scanline = (self.scanline + 1) as u16;
-        let mut row = target_scanline.wrapping_sub(y as u16);
-        if flip_v {
-            row = sprite_height - 1 - row;
-        }
-
-        let (table_base, tile_index) = if self.sprites_8x16 {
-            let table = if tile & 1 != 0 { 0x1000 } else { 0x0000 };
-            let base_index = tile & 0xFE;
-            let index = if row >= 8 { base_index + 1 } else { base_index };
-            (table, index)
-        } else {
-            (self.sprite_pattern_table_addr, tile)
-        };
-
-        let row_in_tile = row % 8;
-        let tile_addr = table_base + (tile_index as u16 * 16);
-        let mut lo = self.read_vram(tile_addr + row_in_tile, mapper);
-        let mut hi = self.read_vram(tile_addr + row_in_tile + 8, mapper);
-
-        if flip_h {
-            lo = lo.reverse_bits();
-            hi = hi.reverse_bits();
-        }
-
-        self.sprite_pattern_lo[sprite_num] = lo;
-        self.sprite_pattern_hi[sprite_num] = hi;
+        let height = if self.sprites_8x16 { 16 } else { 8 };
+        // Empty slots still fetch tile $FF. Mask the row before flipping.
+        let mut row = ((self.scanline + 1) as u16).wrapping_sub(y as u16) & (height - 1);
+        if attr & 0x80 != 0 { row ^= height - 1; }
+        let (table, tile) = if self.sprites_8x16 {
+            (((tile as u16 & 1) << 12), (tile & 0xfe) as u16 + row / 8)
+        } else { (self.sprite_pattern_table_addr, tile as u16) };
+        table + tile * 16 + (row & 7)
     }
 
-    // on dots 257-320, dispatches sprite tile loading, one load per 8-dot window.
     pub fn sprite_fetch_cycle(&mut self, dot: u16, mapper: &dyn Mapper) {
         let offset = dot - 257;
-        let sprite_num = (offset / 8) as usize;
-
-        // Load once per sprite, at the end of its 8-dot window (matches when
-        // pattern-high would be ready in the real 2-dot-per-fetch schedule).
-        if offset % 8 == 7 && sprite_num < 8 {
-            self.load_sprite_from_secondary_oam(sprite_num, mapper);
+        let slot = (offset / 8) as usize;
+        match offset % 8 {
+            0 => {
+                self.sprite_x[slot] = self.oam2[slot * 4 + 3];
+                self.sprite_attr[slot] = self.oam2[slot * 4 + 2];
+                self.begin_nametable_fetch(mapper);
+            }
+            2 => self.begin_nametable_fetch(mapper),
+            1 | 3 => { let _ = self.sample_bus(mapper); }
+            4 => self.drive_bus(self.sprite_pattern_address(slot), mapper),
+            6 => self.drive_bus(self.sprite_pattern_address(slot) + 8, mapper),
+            phase => {
+                let mut byte = self.sample_bus(mapper);
+                if self.sprite_attr[slot] & 0x40 != 0 { byte = byte.reverse_bits(); }
+                if self.oam2[slot * 4] == 0xff { byte = 0; }
+                if phase == 5 { self.sprite_pattern_lo[slot] = byte; }
+                else { self.sprite_pattern_hi[slot] = byte; }
+            }
         }
     }
 

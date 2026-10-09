@@ -42,25 +42,25 @@ pub fn nop_immediate(cpu: &mut CPU) -> u8 {
 
 pub fn nop_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
-    let _ = cpu.read(addr);
+    let _ = cpu.read_cycle(addr);
     0
 }
 
 pub fn nop_zeropagex(cpu: &mut CPU) -> u8 {
     let addr = zeropagex(cpu);
-    let _ = cpu.read(addr);
+    let _ = cpu.read_cycle(addr);
     0
 }
 
 pub fn nop_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
-    let _ = cpu.read(addr);
+    let _ = cpu.read_cycle(addr);
     0
 }
 
 pub fn nop_absolutex(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = absolutex(cpu);
-    let _ = cpu.read(addr);
+    let _ = cpu.read_cycle(addr);
     if page_crossed { 1 } else { 0 }
 }
 

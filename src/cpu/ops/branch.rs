@@ -8,6 +8,8 @@ pub fn bcc(cpu: &mut CPU) -> u8 {
     if cpu.get_flag(Flag::Carry) {
         0
     } else {
+        cpu.read_cycle(cpu.pc);
+        if value.1 { cpu.read_cycle((cpu.pc & 0xff00) | (value.0 & 0xff)); }
         cpu.pc = value.0;
 
         if value.1 {2} else {1}
@@ -20,6 +22,8 @@ pub fn bcs(cpu: &mut CPU) -> u8 {
     if !cpu.get_flag(Flag::Carry) {
         0
     } else {
+        cpu.read_cycle(cpu.pc);
+        if value.1 { cpu.read_cycle((cpu.pc & 0xff00) | (value.0 & 0xff)); }
         cpu.pc = value.0;
 
         if value.1 {2} else {1}
@@ -32,6 +36,8 @@ pub fn beq(cpu: &mut CPU) -> u8 {
     if !cpu.get_flag(Flag::Zero) {
         0
     } else {
+        cpu.read_cycle(cpu.pc);
+        if value.1 { cpu.read_cycle((cpu.pc & 0xff00) | (value.0 & 0xff)); }
         cpu.pc = value.0;
 
         if value.1 {2} else {1}
@@ -46,6 +52,8 @@ pub fn bmi(cpu: &mut CPU) -> u8 {
     if !cpu.get_flag(Flag::Negative) {
         0
     } else {
+        cpu.read_cycle(cpu.pc);
+        if value.1 { cpu.read_cycle((cpu.pc & 0xff00) | (value.0 & 0xff)); }
         cpu.pc = value.0;
 
         if value.1 {2} else {1}
@@ -58,6 +66,8 @@ pub fn bne(cpu: &mut CPU) -> u8 {
     if cpu.get_flag(Flag::Zero) {
         0
     } else {
+        cpu.read_cycle(cpu.pc);
+        if value.1 { cpu.read_cycle((cpu.pc & 0xff00) | (value.0 & 0xff)); }
         cpu.pc = value.0;
 
         if value.1 {2} else {1}
@@ -70,6 +80,8 @@ pub fn bpl(cpu: &mut CPU) -> u8 {
     if cpu.get_flag(Flag::Negative) {
         0
     } else {
+        cpu.read_cycle(cpu.pc);
+        if value.1 { cpu.read_cycle((cpu.pc & 0xff00) | (value.0 & 0xff)); }
         cpu.pc = value.0;
 
         if value.1 {2} else {1}
@@ -82,6 +94,8 @@ pub fn bvc(cpu: &mut CPU) -> u8 {
     if cpu.get_flag(Flag::Overflow) {
         0
     } else {
+        cpu.read_cycle(cpu.pc);
+        if value.1 { cpu.read_cycle((cpu.pc & 0xff00) | (value.0 & 0xff)); }
         cpu.pc = value.0;
 
         if value.1 {2} else {1}
@@ -94,6 +108,8 @@ pub fn bvs(cpu: &mut CPU) -> u8 {
     if !cpu.get_flag(Flag::Overflow) {
         0
     } else {
+        cpu.read_cycle(cpu.pc);
+        if value.1 { cpu.read_cycle((cpu.pc & 0xff00) | (value.0 & 0xff)); }
         cpu.pc = value.0;
 
         if value.1 {2} else {1}

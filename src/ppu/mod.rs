@@ -81,7 +81,10 @@ pub struct PPU {
     
      */
     dot: u16, // 0 through 340
-    odd_frame: bool, // weird behavior shit
+    odd_frame: bool,
+    bus_address: Cell<u16>,
+    m2_phase: u8,
+    short_frame_pending_fetch: bool, // weird behavior shit
     nmi_pending: bool,
     vram: [u8; 4096],
     palette_ram: [u8; 32],
@@ -153,6 +156,9 @@ impl PPU {
             scanline: -1, // start on pre-render
             dot: 0,
             odd_frame: false,
+            bus_address: Cell::new(0),
+            m2_phase: 0,
+            short_frame_pending_fetch: false,
 
             nmi_pending: false,
 
@@ -203,6 +209,31 @@ impl PPU {
         }
     }
 
+    fn rendering_active(&self) -> bool {
+        (self.bg_rendering || self.sprite_rendering) && (-1..=239).contains(&self.scanline)
+    }
+
+    fn drive_bus(&self, address: u16, mapper: &dyn Mapper) {
+        let address = address & 0x3fff;
+        self.bus_address.set(address);
+        mapper.observe_ppu_address(address);
+    }
+
+    fn sample_bus(&self, mapper: &dyn Mapper) -> u8 {
+        self.read_vram(self.bus_address.get(), mapper)
+    }
+
+    fn increment_cpu_vram_address(&self, mapper: &dyn Mapper) {
+        if self.rendering_active() {
+            // Rendering $2007 accesses increment both scroll components.
+            self.increment_coarse_x();
+            self.increment_vert_v();
+        } else {
+            self.v.set(self.v.get().wrapping_add(self.vram_addr_inc as u16) & 0x7fff);
+            self.drive_bus(self.v.get(), mapper);
+        }
+    }
+
     pub fn read_register(&self, register: u8, mapper: &dyn Mapper) -> u8 {
         let r = Self::index_to_register(register);
 
@@ -230,6 +261,9 @@ impl PPU {
 
             PPURegister::PPUDATA => {
                 let ret;
+                // Palette reads refill the buffer from the underlying nametable.
+                let address = self.v.get() & 0x3fff;
+                self.drive_bus(if address >= 0x3f00 { address - 0x1000 } else { address }, mapper);
 
                 if self.v.get() & 0x3F00 == 0x3F00 {
                     ret = self.read_vram(self.v.get(), mapper);
@@ -238,7 +272,7 @@ impl PPU {
                     ret = self.read_buffer.get();
                     self.read_buffer.set(self.read_vram(self.v.get(), mapper));
                 }
-                self.v.set(self.v.get().wrapping_add(self.vram_addr_inc as u16));
+                self.increment_cpu_vram_address(mapper);
 
                 ret
             }
@@ -256,6 +290,9 @@ impl PPU {
 
         match r {
             PPURegister::PPUCTRL => {
+                if !self.nmi_enable && data & 0x80 != 0 && self.vblank_flag.get() {
+                    self.nmi_pending = true;
+                }
                 self.nmi_enable = data & 0b1000_0000 != 0;
                 self.sprites_8x16 = data & 0b0010_0000 != 0;
                 self.bg_pattern_table_addr = if data & 0b0001_0000 != 0 { 0x1000 } else { 0x0000 };
@@ -316,6 +353,7 @@ impl PPU {
                 } else {
                     self.t = (self.t & 0xFF00) | (data as u16);
                     self.v.set(self.t);
+                    self.drive_bus(self.v.get(), mapper);
                     self.w.set(false);
                 }
 
@@ -323,8 +361,9 @@ impl PPU {
             }
 
             PPURegister::PPUDATA => {
+                self.drive_bus(self.v.get(), mapper);
                 self.write_vram(self.v.get(), data, mapper);
-                self.v.set(self.v.get().wrapping_add(self.vram_addr_inc as u16));
+                self.increment_cpu_vram_address(mapper);
 
                 self.io_latch.set(data);
             }
@@ -343,13 +382,6 @@ impl PPU {
             self.sprite_overflow.set(false);
         }
 
-        if self.odd_frame && self.scanline == -1 && self.dot == 339 {
-            self.dot = 0;
-            self.scanline = 0;
-            self.odd_frame = false;
-            self.frame_complete_flag = true;
-            return;
-        }
 
         if self.scanline >= -1 && self.scanline <= 239 {
             if self.dot == 1 {
@@ -361,8 +393,24 @@ impl PPU {
             }
 
             self.run_render_cycle(mapper);
+            if self.dot == 0 { self.short_frame_pending_fetch = false; }
         }
 
+        // M2 falls once every three NTSC PPU dots, independently of rendering.
+        self.m2_phase += 1;
+        if self.m2_phase == 3 {
+            mapper.clock_m2_falling();
+            self.m2_phase = 0;
+        }
+        // Odd rendering frames omit dot 340, after issuing dot 339's fetch.
+        if self.odd_frame && self.scanline == -1 && self.dot == 339
+            && (self.bg_rendering || self.sprite_rendering) {
+            self.dot = 0;
+            self.scanline = 0;
+            self.short_frame_pending_fetch = true;
+            self.frame_complete_flag = true;
+            return;
+        }
         self.dot += 1;
         if self.dot > 340 {
             self.dot = 0;
@@ -492,6 +540,9 @@ impl PPU {
             scanline: self.scanline,
             dot: self.dot,
             odd_frame: self.odd_frame,
+            bus_address: self.bus_address.get(),
+            m2_phase: self.m2_phase,
+            short_frame_pending_fetch: self.short_frame_pending_fetch,
             nmi_pending: self.nmi_pending,
             vram: self.vram,
             palette_ram: self.palette_ram,
@@ -544,6 +595,9 @@ impl PPU {
         self.scanline = state.scanline;
         self.dot = state.dot;
         self.odd_frame = state.odd_frame;
+        self.bus_address.set(state.bus_address);
+        self.m2_phase = state.m2_phase;
+        self.short_frame_pending_fetch = state.short_frame_pending_fetch;
         self.nmi_pending = state.nmi_pending;
         self.vram = state.vram;
         self.palette_ram = state.palette_ram;

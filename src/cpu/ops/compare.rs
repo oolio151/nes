@@ -25,49 +25,55 @@ pub fn cmp_immediate(cpu: &mut CPU) -> u8 {
 
 pub fn cmp_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
     cmp(cpu, value);
     0
 }
 
 pub fn cmp_zeropagex(cpu: &mut CPU) -> u8 {
     let addr = zeropagex(cpu);
-    cmp(cpu, cpu.read(addr));
+    let value = cpu.read_cycle(addr);
+    cmp(cpu, value);
 
     0
 }
 
 pub fn cmp_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
-    cmp(cpu, cpu.read(addr));
+    let value = cpu.read_cycle(addr);
+    cmp(cpu, value);
 
     0
 }
 
 pub fn cmp_absolutex(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = absolutex(cpu);
-    cmp(cpu, cpu.read(addr));
+    let value = cpu.read_cycle(addr);
+    cmp(cpu, value);
 
     if page_crossed {1} else {0}
 }
 
 pub fn cmp_absolutey(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = absolutey(cpu);
-    cmp(cpu, cpu.read(addr));
+    let value = cpu.read_cycle(addr);
+    cmp(cpu, value);
 
     if page_crossed {1} else {0}
 }
 
 pub fn cmp_indirectx(cpu: &mut CPU) -> u8 {
     let addr = indirectx(cpu);
-    cmp(cpu, cpu.read(addr));
+    let value = cpu.read_cycle(addr);
+    cmp(cpu, value);
 
     0
 }
 
 pub fn cmp_indirecty(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = indirecty(cpu);
-    cmp(cpu, cpu.read(addr));
+    let value = cpu.read_cycle(addr);
+    cmp(cpu, value);
 
     if page_crossed {1} else {0}
 }
@@ -85,14 +91,16 @@ pub fn cpx_immediate(cpu: &mut CPU) -> u8 {
 
 pub fn cpx_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
-    cpx(cpu, cpu.read(addr));
+    let value = cpu.read_cycle(addr);
+    cpx(cpu, value);
 
     0
 }
 
 pub fn cpx_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
-    cpx(cpu, cpu.read(addr));
+    let value = cpu.read_cycle(addr);
+    cpx(cpu, value);
 
     0
 }
@@ -111,14 +119,16 @@ pub fn cpy_immediate(cpu: &mut CPU) -> u8 {
 
 pub fn cpy_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
-    cpy(cpu, cpu.read(addr));
+    let value = cpu.read_cycle(addr);
+    cpy(cpu, value);
 
     0
 }
 
 pub fn cpy_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
-    cpy(cpu, cpu.read(addr));
+    let value = cpu.read_cycle(addr);
+    cpy(cpu, value);
 
     0
 }
@@ -126,7 +136,7 @@ pub fn cpy_absolute(cpu: &mut CPU) -> u8 {
 // START OF UNOFFICIAL OPCODES
 
 fn dcp(cpu: &mut CPU, addr: u16) {
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
     let result = dec(cpu, value);
     cpu.write_rmw(addr, value, result);
 

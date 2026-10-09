@@ -2,7 +2,7 @@
 use super::PPU;
 
 impl PPU{
-    pub fn increment_coarse_x(&mut self) {
+    pub fn increment_coarse_x(&self) {
         let mut v = self.v.get();
         if v & 0x001F == 31 {
             v &= !0x001F;
@@ -13,7 +13,7 @@ impl PPU{
         self.v.set(v);
     }
 
-    pub fn increment_vert_v(&mut self) {
+    pub fn increment_vert_v(&self) {
         let mut v = self.v.get();
         if v & 0x7000 != 0x7000 {
             v += 0x1000;

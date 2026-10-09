@@ -19,7 +19,7 @@ pub fn lda_immediate(cpu: &mut CPU) -> u8 {
 
 pub fn lda_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lda(cpu, value);
 
@@ -28,7 +28,7 @@ pub fn lda_zeropage(cpu: &mut CPU) -> u8 {
 
 pub fn lda_zeropagex(cpu: &mut CPU) -> u8 {
     let addr = zeropagex(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lda(cpu, value);
 
@@ -37,7 +37,7 @@ pub fn lda_zeropagex(cpu: &mut CPU) -> u8 {
 
 pub fn lda_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lda(cpu, value);
 
@@ -46,7 +46,7 @@ pub fn lda_absolute(cpu: &mut CPU) -> u8 {
 
 pub fn lda_absolutex(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = absolutex(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lda(cpu, value);
 
@@ -55,7 +55,7 @@ pub fn lda_absolutex(cpu: &mut CPU) -> u8 {
 
 pub fn lda_absolutey(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = absolutey(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lda(cpu, value);
 
@@ -64,7 +64,7 @@ pub fn lda_absolutey(cpu: &mut CPU) -> u8 {
 
 pub fn lda_indirectx(cpu: &mut CPU) -> u8 {
     let addr = indirectx(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lda(cpu, value);
 
@@ -73,7 +73,7 @@ pub fn lda_indirectx(cpu: &mut CPU) -> u8 {
 
 pub fn lda_indirecty(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = indirecty(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lda(cpu, value);
 
@@ -98,7 +98,7 @@ pub fn ldx_immediate(cpu: &mut CPU) -> u8 {
 
 pub fn ldx_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     ldx(cpu, value);
 
@@ -107,7 +107,7 @@ pub fn ldx_zeropage(cpu: &mut CPU) -> u8 {
 
 pub fn ldx_zeropagey(cpu: &mut CPU) -> u8 {
     let addr = zeropagey(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     ldx(cpu, value);
 
@@ -116,7 +116,7 @@ pub fn ldx_zeropagey(cpu: &mut CPU) -> u8 {
 
 pub fn ldx_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     ldx(cpu, value);
 
@@ -125,7 +125,7 @@ pub fn ldx_absolute(cpu: &mut CPU) -> u8 {
 
 pub fn ldx_absolutey(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = absolutey(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     ldx(cpu, value);
 
@@ -150,7 +150,7 @@ pub fn ldy_immediate(cpu: &mut CPU) -> u8 {
 
 pub fn ldy_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     ldy(cpu, value);
 
@@ -159,7 +159,7 @@ pub fn ldy_zeropage(cpu: &mut CPU) -> u8 {
 
 pub fn ldy_zeropagex(cpu: &mut CPU) -> u8 {
     let addr = zeropagex(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     ldy(cpu, value);
     
@@ -168,7 +168,7 @@ pub fn ldy_zeropagex(cpu: &mut CPU) -> u8 {
 
 pub fn ldy_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
     
     ldy(cpu, value);
 
@@ -177,7 +177,7 @@ pub fn ldy_absolute(cpu: &mut CPU) -> u8 {
 
 pub fn ldy_absolutex(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = absolutex(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     ldy(cpu, value);
     
@@ -287,7 +287,7 @@ fn lax(cpu: &mut CPU, value: u8) {
 
 pub fn lax_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lax(cpu, value);
 
@@ -296,7 +296,7 @@ pub fn lax_zeropage(cpu: &mut CPU) -> u8 {
 
 pub fn lax_zeropagey(cpu: &mut CPU) -> u8 {
     let addr = zeropagey(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lax(cpu, value);
 
@@ -305,7 +305,7 @@ pub fn lax_zeropagey(cpu: &mut CPU) -> u8 {
 
 pub fn lax_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lax(cpu, value);
 
@@ -314,7 +314,7 @@ pub fn lax_absolute(cpu: &mut CPU) -> u8 {
 
 pub fn lax_absolutey(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = absolutey(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lax(cpu, value);
 
@@ -323,7 +323,7 @@ pub fn lax_absolutey(cpu: &mut CPU) -> u8 {
 
 pub fn lax_indirectx(cpu: &mut CPU) -> u8 {
     let addr = indirectx(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lax(cpu, value);
 
@@ -332,7 +332,7 @@ pub fn lax_indirectx(cpu: &mut CPU) -> u8 {
 
 pub fn lax_indirecty(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = indirecty(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     lax(cpu, value);
 
@@ -405,7 +405,7 @@ pub fn ahx_absolutey(cpu: &mut CPU) -> u8 {
 
 pub fn las_absolutey(cpu: &mut CPU) -> u8 {
     let (addr, page_crossed) = absolutey(cpu);
-    let value = cpu.read(addr) & cpu.s;
+    let value = cpu.read_cycle(addr) & cpu.s;
 
     cpu.a = value;
     cpu.x = value;

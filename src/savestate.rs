@@ -5,7 +5,7 @@ use std::{io::{Read, Write}, path::PathBuf};
 
 pub type SaveError = String;
 const MAGIC: &[u8; 8] = b"NESSTATE";
-const VERSION: u32 = 3;
+const VERSION: u32 = 4;
 const MAX_FILE_SIZE: u64 = 1024 * 1024;
 const HEADER_SIZE: usize = 8 + 4 + 32 + 32;
 
@@ -25,6 +25,10 @@ pub struct CpuState {
     pub(crate) s: u8,
     pub(crate) p: u8,
     pub(crate) cycle_count: u64,
+    pub(crate) nmi_latched: bool,
+    pub(crate) irq_previous_cycle: bool,
+    pub(crate) irq_poll: bool,
+    pub(crate) irq_sampled: bool,
 
 }
 
@@ -74,6 +78,9 @@ pub struct PpuState {
     pub(crate) scanline: i16,
     pub(crate) dot: u16,
     pub(crate) odd_frame: bool,
+    pub(crate) bus_address: u16,
+    pub(crate) m2_phase: u8,
+    pub(crate) short_frame_pending_fetch: bool,
     pub(crate) nmi_pending: bool,
     #[serde(with = "serde_big_array::BigArray")]
     pub(crate) vram: [u8; 4096],
@@ -235,6 +242,15 @@ pub enum MapperState {
         prg_ram: Vec<u8>,
         chr_ram: Vec<u8>,
     },
+    Mmc3 {
+        bank_select: u8,
+        banks: [u8; 8],
+        horizontal: bool,
+        ram_control: u8,
+        irq: crate::cpu::mapper::Mmc3IrqState,
+        prg_ram: Vec<u8>,
+        chr_ram: Vec<u8>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -322,9 +338,16 @@ fn validate(state: &SaveState) -> Result<(), SaveError> {
         }
     }
     let p = &state.bus.ppu;
+    if let MapperState::Mmc3 { irq, .. } = &state.bus.mapper {
+        if irq.a12_high != (p.bus_address & 0x1000 != 0) {
+            return Err("MMC3 A12 state disagrees with the PPU bus".into());
+        }
+    }
     let a = &state.bus.apu;
     let valid = p.framebuffer.len() == 61440
         && (-1..=260).contains(&p.scanline) && p.dot <= 340
+        && (!p.short_frame_pending_fetch || (p.scanline == 0 && p.dot == 0))
+        && p.bus_address <= 0x3fff && p.m2_phase < 3
         && p.x < 8 && p.v <= 0x7fff && p.t <= 0x7fff
         && [0, 0x1000].contains(&p.bg_pattern_table_addr)
         && [0, 0x1000].contains(&p.sprite_pattern_table_addr)

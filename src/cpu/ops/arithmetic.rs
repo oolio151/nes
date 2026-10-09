@@ -31,48 +31,55 @@ pub fn adc_immediate(cpu: &mut CPU) -> u8 {
 
 pub fn adc_zeropage(cpu: &mut CPU) -> u8 {
     let value = zeropage(cpu);
-    adc(cpu, cpu.read(value));
+    let value = cpu.read_cycle(value);
+    adc(cpu, value);
 
     0
 }
 
 pub fn adc_zeropagex(cpu: &mut CPU) -> u8 {
     let value = zeropagex(cpu);
-    adc(cpu, cpu.read(value));
+    let value = cpu.read_cycle(value);
+    adc(cpu, value);
     0
 }
 
 pub fn adc_absolute(cpu: &mut CPU) -> u8 {
     let value = absolute(cpu);
-    adc(cpu, cpu.read(value));
+    let value = cpu.read_cycle(value);
+    adc(cpu, value);
     0
 }
 
 pub fn adc_absolutex(cpu: &mut CPU) -> u8 {
-    let value = absolutex(cpu);
-    adc(cpu, cpu.read(value.0));
+    let (address, page_crossed) = absolutex(cpu);
+    let operand = cpu.read_cycle(address);
+    adc(cpu, operand);
 
-     if value.1 {1} else {0}
+    if page_crossed { 1 } else { 0 }
 }
 
 pub fn adc_absolutey(cpu: &mut CPU) -> u8 {
-    let value = absolutey(cpu);
-    adc(cpu, cpu.read(value.0));
+    let (address, page_crossed) = absolutey(cpu);
+    let operand = cpu.read_cycle(address);
+    adc(cpu, operand);
 
-     if value.1 {1} else {0}
+    if page_crossed { 1 } else { 0 }
 }
 
 pub fn adc_indirectx(cpu: &mut CPU) -> u8 {
     let value = indirectx(cpu);
-    adc(cpu, cpu.read(value));
+    let value = cpu.read_cycle(value);
+    adc(cpu, value);
     0
 }
 
 pub fn adc_indirecty(cpu: &mut CPU) -> u8 {
-    let value = indirecty(cpu);
-    adc(cpu, cpu.read(value.0));
+    let (address, page_crossed) = indirecty(cpu);
+    let operand = cpu.read_cycle(address);
+    adc(cpu, operand);
 
-     if value.1 {1} else {0}
+    if page_crossed { 1 } else { 0 }
 }
 
 pub(crate) fn dec(cpu: &mut CPU, value: u8) -> u8 {
@@ -86,7 +93,7 @@ pub(crate) fn dec(cpu: &mut CPU, value: u8) -> u8 {
 
 pub fn dec_zeropage(cpu: &mut CPU) -> u8 {
     let addr = zeropage(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     let result = dec(cpu, value);
 
@@ -98,7 +105,7 @@ pub fn dec_zeropage(cpu: &mut CPU) -> u8 {
 
 pub fn dec_zeropagex(cpu: &mut CPU) -> u8 {
     let addr = zeropagex(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     let result = dec(cpu, value);
 
@@ -110,7 +117,7 @@ pub fn dec_zeropagex(cpu: &mut CPU) -> u8 {
 
 pub fn dec_absolute(cpu: &mut CPU) -> u8 {
     let addr = absolute(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     let result = dec(cpu, value);
 
@@ -121,7 +128,7 @@ pub fn dec_absolute(cpu: &mut CPU) -> u8 {
 
 pub fn dec_absolutex(cpu: &mut CPU) -> u8 {
     let (addr, _page_crossed) = absolutex(cpu);
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
 
     let result = dec(cpu, value);
 
@@ -163,7 +170,7 @@ pub fn dey(cpu: &mut CPU) -> u8 {
 
     pub fn inc_zeropage(cpu: &mut CPU) -> u8 {
         let addr = zeropage(cpu);
-        let value = cpu.read(addr);
+        let value = cpu.read_cycle(addr);
 
         let result = inc(cpu, value);
 
@@ -175,7 +182,7 @@ pub fn dey(cpu: &mut CPU) -> u8 {
 
     pub fn inc_zeropagex(cpu: &mut CPU) -> u8 {
         let addr = zeropagex(cpu);
-        let value = cpu.read(addr);
+        let value = cpu.read_cycle(addr);
 
         let result = inc(cpu, value);
 
@@ -187,7 +194,7 @@ pub fn dey(cpu: &mut CPU) -> u8 {
 
     pub fn inc_absolute(cpu: &mut CPU) -> u8 {
         let addr = absolute(cpu);
-        let value = cpu.read(addr);
+        let value = cpu.read_cycle(addr);
 
         let result = inc(cpu, value);
 
@@ -198,7 +205,7 @@ pub fn dey(cpu: &mut CPU) -> u8 {
 
     pub fn inc_absolutex(cpu: &mut CPU) -> u8 {
         let (addr, _page_crossed) = absolutex(cpu);
-        let value = cpu.read(addr);
+        let value = cpu.read_cycle(addr);
 
         let result = inc(cpu, value);
 
@@ -242,53 +249,60 @@ pub fn sbc_immediate(cpu: &mut CPU) -> u8 {
 
 pub fn sbc_zeropage(cpu: &mut CPU) -> u8 {
     let value = zeropage(cpu);
-    sbc(cpu, cpu.read(value));
+    let value = cpu.read_cycle(value);
+    sbc(cpu, value);
 
     0
 }
 
 pub fn sbc_zeropagex(cpu: &mut CPU) -> u8 {
     let value = zeropagex(cpu);
-    sbc(cpu, cpu.read(value));
+    let value = cpu.read_cycle(value);
+    sbc(cpu, value);
     0
 }
 
 pub fn sbc_absolute(cpu: &mut CPU) -> u8 {
     let value = absolute(cpu);
-    sbc(cpu, cpu.read(value));
+    let value = cpu.read_cycle(value);
+    sbc(cpu, value);
     0
 }
 
 pub fn sbc_absolutex(cpu: &mut CPU) -> u8 {
-    let value = absolutex(cpu);
-    sbc(cpu, cpu.read(value.0));
+    let (address, page_crossed) = absolutex(cpu);
+    let operand = cpu.read_cycle(address);
+    sbc(cpu, operand);
 
-     if value.1 {1} else {0}
+    if page_crossed { 1 } else { 0 }
 }
 
 pub fn sbc_absolutey(cpu: &mut CPU) -> u8 {
-    let value = absolutey(cpu);
-    sbc(cpu, cpu.read(value.0));
+    let (address, page_crossed) = absolutey(cpu);
+    let operand = cpu.read_cycle(address);
+    sbc(cpu, operand);
 
-     if value.1 {1} else {0}
+    if page_crossed { 1 } else { 0 }
 }
 
 pub fn sbc_indirectx(cpu: &mut CPU) -> u8 {
     let value = indirectx(cpu);
-    sbc(cpu, cpu.read(value));
+    let value = cpu.read_cycle(value);
+    sbc(cpu, value);
     0
 }
 
 pub fn sbc_indirecty(cpu: &mut CPU) -> u8 {
-    let value = indirecty(cpu);
-    sbc(cpu, cpu.read(value.0));
+    let (address, page_crossed) = indirecty(cpu);
+    let operand = cpu.read_cycle(address);
+    sbc(cpu, operand);
 
-     if value.1 {1} else {0}
+    if page_crossed { 1 } else { 0 }
 }
 
 // START OF UNOFFICAL OPCODES
 fn rra(cpu: &mut CPU, addr: u16) {
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
     let result = ror(cpu, value);
     cpu.write_rmw(addr, value, result);
 
@@ -338,7 +352,7 @@ pub fn rra_indirecty(cpu: &mut CPU) -> u8 {
 }
 
 fn isc(cpu: &mut CPU, addr: u16) {
-    let value = cpu.read(addr);
+    let value = cpu.read_cycle(addr);
     let result = inc(cpu, value);
     cpu.write_rmw(addr, value, result);
 

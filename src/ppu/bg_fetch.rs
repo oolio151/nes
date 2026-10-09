@@ -3,16 +3,16 @@ use crate::cpu::mapper::Mapper;
 
 impl PPU {
     // which tile should be drawn
-    pub fn fetch_nametable_byte(&self, mapper: &dyn Mapper) -> u8 {
+    pub fn begin_nametable_fetch(&self, mapper: &dyn Mapper) {
         let addr = 0x2000 | (self.v.get() & 0x0FFF);
-        self.read_vram(addr, mapper)
+        self.drive_bus(addr, mapper);
     }
 
     // which of the 4 background palletes should be used
-    pub fn fetch_attribute_byte(&self, mapper: &dyn Mapper) -> u8 {
+    pub fn begin_attribute_fetch(&self, mapper: &dyn Mapper) {
         let v = self.v.get();
         let addr = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
-        self.read_vram(addr, mapper)
+        self.drive_bus(addr, mapper);
     }
 
     // given attribute byte, what 2 bits apply to tile
@@ -23,15 +23,15 @@ impl PPU {
     }
 
     // finding the pixel shapes for a tiles current row
-    pub fn fetch_pattern_low(&self, mapper: &dyn Mapper) -> u8 {
+    pub fn begin_pattern_low_fetch(&self, mapper: &dyn Mapper) {
         let fine_y = (self.v.get() >> 12) & 0x07;
         let addr = self.bg_pattern_table_addr + (self.nt_latch as u16 * 16) + fine_y;
-        self.read_vram(addr, mapper)
+        self.drive_bus(addr, mapper);
     }
 
-    pub fn fetch_pattern_high(&self, mapper: &dyn Mapper) -> u8 {
+    pub fn begin_pattern_high_fetch(&self, mapper: &dyn Mapper) {
         let fine_y = (self.v.get() >> 12) & 0x07;
         let addr = self.bg_pattern_table_addr + (self.nt_latch as u16 * 16) + fine_y + 8;
-        self.read_vram(addr, mapper)
+        self.drive_bus(addr, mapper);
     }
 }

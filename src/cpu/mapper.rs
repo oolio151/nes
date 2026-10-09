@@ -1,6 +1,9 @@
 use crate::cartridge::Mirroring;
 use crate::savestate::MapperState;
 
+mod mmc3;
+pub use mmc3::{Mmc3, Mmc3IrqState};
+
 pub trait Mapper {
     fn save_state(&self) -> Result<MapperState, String> {
         Err("savestates unsupported by this mapper".into())
@@ -22,7 +25,10 @@ pub trait Mapper {
     fn ppu_read(&self, address: u16) -> u8;
     fn ppu_write(&mut self, address: u16, data: u8);
     fn mirroring(&self) -> Mirroring;
-    fn notify_ppu_address(&mut self, _address: u16) {}
+    /// Raw external PPU address, before CHR/nametable mapping.
+    fn observe_ppu_address(&self, _address: u16) {}
+    fn clock_m2_falling(&self) {}
+    fn irq_pending(&self) -> bool { false }
 }
 
 pub struct Nrom {
